@@ -4,6 +4,6 @@ const { logger } = require("./shared/utils/logger");
 
 const app = createApp();
 
-app.listen(config.port, () => {
-  logger.info(`Server running on http://localhost:${config.port}`);
+app.listen(config.port, '0.0.0.0', () => {
+  logger.info(`Server running on http://0.0.0.0:${config.port}`);
 });
