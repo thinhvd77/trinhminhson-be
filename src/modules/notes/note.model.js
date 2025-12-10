@@ -1,4 +1,4 @@
-const { pgTable, serial, text, varchar, integer, doublePrecision, boolean, timestamp } = require("drizzle-orm/pg-core");
+const { pgTable, serial, text, varchar, integer, doublePrecision, boolean, timestamp, jsonb } = require("drizzle-orm/pg-core");
 
 const notes = pgTable("notes", {
   id: serial("id").primaryKey(),
@@ -8,6 +8,7 @@ const notes = pgTable("notes", {
   fontFamily: varchar("font_family", { length: 100 }).notNull().default("'Work Sans', sans-serif"),
   fontWeight: varchar("font_weight", { length: 10 }).notNull().default("400"),
   fontSize: varchar("font_size", { length: 10 }).notNull().default("14px"),
+  textSegments: jsonb("text_segments"),
   x: doublePrecision("x").notNull().default(100),
   y: doublePrecision("y").notNull().default(100),
   rotation: doublePrecision("rotation").notNull().default(0),

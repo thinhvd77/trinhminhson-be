@@ -51,13 +51,17 @@ class NoteController {
   async updateNote(req, res, next) {
     try {
       const { id } = noteIdSchema.parse(req.params);
+      console.log('Update note request:', { id, body: req.body });
       const noteData = updateNoteSchema.parse(req.body);
+      console.log('Validated noteData:', noteData);
       const note = await noteService.updateNote(id, noteData);
+      console.log('Updated note:', note);
       res.json({
         success: true,
         data: note,
       });
     } catch (error) {
+      console.error('Update note error:', error);
       next(error);
     }
   }

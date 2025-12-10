@@ -1,5 +1,13 @@
 const { z } = require("zod");
 
+const textSegmentSchema = z.object({
+  content: z.string().min(1).max(200),
+  textColor: z.string(),
+  fontFamily: z.string(),
+  fontWeight: z.string(),
+  fontSize: z.string(),
+});
+
 const createNoteSchema = z.object({
   content: z.string().min(1, "Content is required").max(200, "Content cannot exceed 200 characters"),
   color: z.string().default("#FEF3C7"),
@@ -20,6 +28,7 @@ const updateNoteSchema = z.object({
   fontFamily: z.string().optional(),
   fontWeight: z.string().optional(),
   fontSize: z.string().optional(),
+  textSegments: z.array(textSegmentSchema).optional(),
   x: z.number().optional(),
   y: z.number().optional(),
   rotation: z.number().optional(),
