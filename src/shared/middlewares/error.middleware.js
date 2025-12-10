@@ -8,15 +8,19 @@ function notFoundHandler(req, res, next) {
 // Generic error handler
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
+  // Log error for debugging
+  console.error("Error:", err);
+
   // Handle Zod validation errors
   if (err instanceof ZodError) {
-    const errors = Array.isArray(err.errors) 
-      ? err.errors.map(e => ({
-          field: Array.isArray(e.path) ? e.path.join('.') : String(e.path),
-          message: e.message,
-        }))
-      : [];
-    
+    const errors = err.errors.map(e => ({
+      field: e.path.join('.'),
+      message: e.message,
+      code: e.code,
+    }));
+
+    console.error("Validation errors:", JSON.stringify(errors, null, 2));
+
     return res.status(400).json({
       message: "Validation error",
       errors,
@@ -25,10 +29,6 @@ function errorHandler(err, req, res, next) {
 
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
-
-  if (process.env.NODE_ENV !== "production") {
-    console.error(err);
-  }
 
   res.status(status).json({ message });
 }
