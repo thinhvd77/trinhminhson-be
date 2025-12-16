@@ -6,31 +6,28 @@ const userRepository = new UserRepository();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key-change-this-in-production";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const SALT_ROUNDS = 10;
 
 class AuthService {
-  async login(email, password) {
-    // Find user by email
-    const user = await userRepository.findByEmail(email);
-    if (!user) {
-      const error = new Error("Invalid email or password");
-      error.status = 401;
+  async register(name, email, password) {
+    // Check if user already exists
+    const existingUser = await userRepository.findByEmail(email);
+    if (existingUser) {
+      const error = new Error("Email đã được sử dụng");
+      error.status = 400;
       throw error;
     }
 
-    // Check if user is active
-    if (!user.isActive) {
-      const error = new Error("Account is disabled");
-      error.status = 403;
-      throw error;
-    }
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      const error = new Error("Invalid email or password");
-      error.status = 401;
-      throw error;
-    }
+    // Create user with member role
+    const user = await userRepository.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "member", // All registered users are members
+    });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -38,6 +35,7 @@ class AuthService {
         userId: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
@@ -50,6 +48,56 @@ class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    };
+  }
+
+  async login(email, password) {
+    // Find user by email
+    const user = await userRepository.findByEmail(email);
+    if (!user) {
+      const error = new Error("Email hoặc mật khẩu không đúng");
+      error.status = 401;
+      throw error;
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      const error = new Error("Tài khoản đã bị vô hiệu hóa");
+      error.status = 403;
+      throw error;
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      const error = new Error("Email hoặc mật khẩu không đúng");
+      error.status = 401;
+      throw error;
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    // Return token and user info (without password)
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
         isActive: user.isActive,
       },
     };
@@ -69,7 +117,7 @@ class AuthService {
   async getUserFromToken(token) {
     const decoded = this.verifyToken(token);
     const user = await userRepository.findById(decoded.userId);
-    
+
     if (!user || !user.isActive) {
       const error = new Error("User not found or inactive");
       error.status = 401;
@@ -80,6 +128,7 @@ class AuthService {
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
       isActive: user.isActive,
     };
   }

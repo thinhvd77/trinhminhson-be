@@ -39,11 +39,12 @@ class VocabularyService {
             throw new Error("Vocabulary set not found");
         }
 
-        // For non-owners, return preview-only data (no learned tracking)
+        // For non-owners, return preview-only data (no learned tracking, default settings)
         if (!isOwner) {
             return {
                 ...full,
                 is_owner: false,
+                default_face: 0, // Community sets always use default face order
                 learnedCount: 0,
                 flashcards: (full.flashcards || []).map((c) => ({
                     ...c,

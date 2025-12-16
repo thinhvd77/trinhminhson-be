@@ -71,7 +71,8 @@ class VocabularyRepository {
             shared_at: set.sharedAt,
             cloned_from_set_id: set.clonedFromSetId,
             sort_order: set.sortOrder,
-            default_face: set.defaultFace,
+            // Community sets always use default face (0), personal sets keep owner's setting
+            default_face: isPersonal ? set.defaultFace : 0,
             created_at: set.createdAt,
             updated_at: set.updatedAt,
             card_count: countMap.get(set.id) || 0,
