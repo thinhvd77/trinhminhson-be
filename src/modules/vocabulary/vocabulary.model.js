@@ -17,6 +17,7 @@ const vocabularySets = pgTable("vocabulary_sets", {
     isShared: boolean("is_shared").default(false).notNull(),
     sharedAt: timestamp("shared_at"),
     clonedFromSetId: integer("cloned_from_set_id").references(() => vocabularySets.id, { onDelete: "set null" }),
+    originalOwnerId: integer("original_owner_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

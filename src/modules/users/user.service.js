@@ -86,6 +86,29 @@ class UserService {
     return { message: "User deleted successfully" };
   }
 
+  async changePassword(userId, oldPassword, newPassword) {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      const error = new Error("User not found");
+      error.status = 404;
+      throw error;
+    }
+
+    // Verify old password
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+    if (!isValidPassword) {
+      const error = new Error("Current password is incorrect");
+      error.status = 401;
+      throw error;
+    }
+
+    // Hash and update new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await userRepository.update(userId, { password: hashedPassword });
+    
+    return { message: "Password changed successfully" };
+  }
+
   sanitizeUser(user) {
     const { password, ...sanitized } = user;
     return sanitized;

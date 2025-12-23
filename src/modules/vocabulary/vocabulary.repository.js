@@ -7,6 +7,7 @@ const { db } = require("../../shared/core/db");
 const { vocabularySets, flashcards } = require("./vocabulary.model");
 const { users } = require("../users/user.model");
 const { eq, sql, and, or, isNull, inArray, ne, desc } = require("drizzle-orm");
+const { alias } = require("drizzle-orm/pg-core");
 
 class VocabularyRepository {
     // ============= Vocabulary Sets =============
@@ -36,13 +37,18 @@ class VocabularyRepository {
             );
         }
 
+        // Create alias for original owner
+        const originalOwner = alias(users, 'original_owner');
+
         const sets = await db
             .select({
                 set: vocabularySets,
                 ownerName: users.name,
+                originalOwnerName: originalOwner.name,
             })
             .from(vocabularySets)
             .leftJoin(users, eq(vocabularySets.ownerId, users.id))
+            .leftJoin(originalOwner, eq(vocabularySets.originalOwnerId, originalOwner.id))
             .where(whereClause)
             .orderBy(
                 // Personal sets keep existing ordering; community sets show newest shared first
@@ -63,10 +69,12 @@ class VocabularyRepository {
         const countMap = new Map();
         cardCounts.forEach((c) => countMap.set(c.setId, Number(c.count)));
 
-        return sets.map(({ set, ownerName }) => ({
+        return sets.map(({ set, ownerName, originalOwnerName }) => ({
             ...set,
             owner_id: set.ownerId,
             owner_name: ownerName || null,
+            original_owner_id: set.originalOwnerId,
+            original_owner_name: originalOwnerName || null,
             is_shared: set.isShared,
             shared_at: set.sharedAt,
             cloned_from_set_id: set.clonedFromSetId,
@@ -83,23 +91,29 @@ class VocabularyRepository {
      * Get a vocabulary set by ID
      */
     async getSetById(id) {
+        const originalOwner = alias(users, 'original_owner');
+
         const [row] = await db
             .select({
                 set: vocabularySets,
                 ownerName: users.name,
+                originalOwnerName: originalOwner.name,
             })
             .from(vocabularySets)
             .leftJoin(users, eq(vocabularySets.ownerId, users.id))
+            .leftJoin(originalOwner, eq(vocabularySets.originalOwnerId, originalOwner.id))
             .where(eq(vocabularySets.id, id));
 
         if (!row) return null;
 
-        const { set, ownerName } = row;
+        const { set, ownerName, originalOwnerName } = row;
 
         return {
             ...set,
             owner_id: set.ownerId,
             owner_name: ownerName || null,
+            original_owner_id: set.originalOwnerId,
+            original_owner_name: originalOwnerName || null,
             is_shared: set.isShared,
             shared_at: set.sharedAt,
             cloned_from_set_id: set.clonedFromSetId,
@@ -158,7 +172,7 @@ class VocabularyRepository {
     /**
      * Create a new vocabulary set
      */
-    async createSet({ name, description = "", ownerId = null, isShared = false, clonedFromSetId = null } = {}) {
+    async createSet({ name, description = "", ownerId = null, isShared = false, clonedFromSetId = null, originalOwnerId = null } = {}) {
         const [result] = await db
             .insert(vocabularySets)
             .values({
@@ -168,6 +182,7 @@ class VocabularyRepository {
                 isShared,
                 sharedAt: isShared ? new Date() : null,
                 clonedFromSetId,
+                originalOwnerId,
             })
             .returning({ id: vocabularySets.id });
 

@@ -220,6 +220,9 @@ class VocabularyService {
             ownerId,
             isShared: false,
             clonedFromSetId: set.id,
+            // Lưu ID tác giả gốc: nếu bộ từ đã được clone thì giữ nguyên original_owner_id, 
+            // ngược lại lưu owner_id của bộ từ nguồn
+            originalOwnerId: set.original_owner_id || set.owner_id,
         });
 
         const cardsToCreate = (sourceCards || []).map((c) => ({
