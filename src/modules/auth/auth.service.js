@@ -10,11 +10,11 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const SALT_ROUNDS = 10;
 
 class AuthService {
-  async register(name, email, password) {
+  async register(name, username, password) {
     // Check if user already exists
-    const existingUser = await userRepository.findByEmail(email);
+    const existingUser = await userRepository.findByUsername(username);
     if (existingUser) {
-      const error = new Error("Email đã được sử dụng");
+      const error = new Error("Tên đăng nhập đã được sử dụng");
       error.status = 400;
       throw error;
     }
@@ -25,7 +25,7 @@ class AuthService {
     // Create user with member role
     const user = await userRepository.create({
       name,
-      email,
+      username,
       password: hashedPassword,
       role: "member", // All registered users are members
     });
@@ -34,7 +34,7 @@ class AuthService {
     const token = jwt.sign(
       {
         userId: user.id,
-        email: user.email,
+        username: user.username,
         name: user.name,
         role: user.role,
       },
@@ -47,7 +47,7 @@ class AuthService {
       token,
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username,
         name: user.name,
         role: user.role,
         isActive: user.isActive,
@@ -55,11 +55,11 @@ class AuthService {
     };
   }
 
-  async login(email, password) {
-    // Find user by email
-    const user = await userRepository.findByEmail(email);
+  async login(username, password) {
+    // Find user by username
+    const user = await userRepository.findByUsername(username);
     if (!user) {
-      const error = new Error("Email hoặc mật khẩu không đúng");
+      const error = new Error("Tên đăng nhập hoặc mật khẩu không đúng");
       error.status = 401;
       throw error;
     }
@@ -74,7 +74,7 @@ class AuthService {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      const error = new Error("Email hoặc mật khẩu không đúng");
+      const error = new Error("Tên đăng nhập hoặc mật khẩu không đúng");
       error.status = 401;
       throw error;
     }
@@ -83,7 +83,7 @@ class AuthService {
     const token = jwt.sign(
       {
         userId: user.id,
-        email: user.email,
+        username: user.username,
         name: user.name,
         role: user.role,
       },
@@ -96,7 +96,7 @@ class AuthService {
       token,
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username,
         name: user.name,
         avatar: user.avatar || null,
         role: user.role,
@@ -128,7 +128,7 @@ class AuthService {
 
     return {
       id: user.id,
-      email: user.email,
+      username: user.username,
       name: user.name,
       avatar: user.avatar || null,
       role: user.role,

@@ -4,6 +4,7 @@
  */
 
 const { vocabularyService } = require("./vocabulary.service");
+const { logger } = require("../../shared/utils/logger");
 
 class VocabularyController {
     /**
@@ -16,6 +17,7 @@ class VocabularyController {
             const sets = await vocabularyService.getAllSets({ viewerUserId, scope });
             res.json(sets);
         } catch (error) {
+            logger.error("Error fetching vocabulary sets:", error);
             res.status(500).json({ error: error.message });
         }
     }

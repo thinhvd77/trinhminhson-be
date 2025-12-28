@@ -2,7 +2,7 @@ const { pgTable, serial, varchar, timestamp, boolean } = require("drizzle-orm/pg
 
 const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
+  username: varchar("username", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   password: varchar("password", { length: 255 }).notNull(),
   avatar: varchar("avatar", { length: 255 }),

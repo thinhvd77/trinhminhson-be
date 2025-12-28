@@ -33,9 +33,9 @@ class UserService {
   }
 
   async createUser(userData) {
-    const existingUser = await userRepository.findByEmail(userData.email);
+    const existingUser = await userRepository.findByUsername(userData.username);
     if (existingUser) {
-      const error = new Error("Email already exists");
+      const error = new Error("Username already exists");
       error.status = 409;
       throw error;
     }
@@ -57,10 +57,10 @@ class UserService {
       throw error;
     }
 
-    if (userData.email && userData.email !== existingUser.email) {
-      const emailExists = await userRepository.findByEmail(userData.email);
-      if (emailExists) {
-        const error = new Error("Email already exists");
+    if (userData.username && userData.username !== existingUser.username) {
+      const usernameExists = await userRepository.findByUsername(userData.username);
+      if (usernameExists) {
+        const error = new Error("Username already exists");
         error.status = 409;
         throw error;
       }

@@ -28,11 +28,10 @@ async function getProfile(req, res, next) {
 async function updateProfile(req, res, next) {
   try {
     const userId = req.user.id;
-    const { name, email } = req.body;
+    const { name } = req.body;
     
     const updateData = {};
     if (name !== undefined) updateData.name = name;
-    if (email !== undefined) updateData.email = email;
 
     const user = await userService.updateUser(userId, updateData);
     res.status(200).json(user);

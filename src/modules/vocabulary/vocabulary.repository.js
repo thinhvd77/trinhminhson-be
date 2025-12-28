@@ -42,7 +42,18 @@ class VocabularyRepository {
 
         const sets = await db
             .select({
-                set: vocabularySets,
+                id: vocabularySets.id,
+                ownerId: vocabularySets.ownerId,
+                name: vocabularySets.name,
+                description: vocabularySets.description,
+                sortOrder: vocabularySets.sortOrder,
+                defaultFace: vocabularySets.defaultFace,
+                isShared: vocabularySets.isShared,
+                sharedAt: vocabularySets.sharedAt,
+                clonedFromSetId: vocabularySets.clonedFromSetId,
+                originalOwnerId: vocabularySets.originalOwnerId,
+                createdAt: vocabularySets.createdAt,
+                updatedAt: vocabularySets.updatedAt,
                 ownerName: users.name,
                 originalOwnerName: originalOwner.name,
             })
@@ -69,21 +80,23 @@ class VocabularyRepository {
         const countMap = new Map();
         cardCounts.forEach((c) => countMap.set(c.setId, Number(c.count)));
 
-        return sets.map(({ set, ownerName, originalOwnerName }) => ({
-            ...set,
-            owner_id: set.ownerId,
-            owner_name: ownerName || null,
-            original_owner_id: set.originalOwnerId,
-            original_owner_name: originalOwnerName || null,
-            is_shared: set.isShared,
-            shared_at: set.sharedAt,
-            cloned_from_set_id: set.clonedFromSetId,
-            sort_order: set.sortOrder,
+        return sets.map((row) => ({
+            id: row.id,
+            owner_id: row.ownerId,
+            owner_name: row.ownerName || null,
+            name: row.name,
+            description: row.description,
+            original_owner_id: row.originalOwnerId,
+            original_owner_name: row.originalOwnerName || null,
+            is_shared: row.isShared,
+            shared_at: row.sharedAt,
+            cloned_from_set_id: row.clonedFromSetId,
+            sort_order: row.sortOrder,
             // Community sets always use default face (0), personal sets keep owner's setting
-            default_face: isPersonal ? set.defaultFace : 0,
-            created_at: set.createdAt,
-            updated_at: set.updatedAt,
-            card_count: countMap.get(set.id) || 0,
+            default_face: isPersonal ? row.defaultFace : 0,
+            created_at: row.createdAt,
+            updated_at: row.updatedAt,
+            card_count: countMap.get(row.id) || 0,
         }));
     }
 
@@ -95,7 +108,18 @@ class VocabularyRepository {
 
         const [row] = await db
             .select({
-                set: vocabularySets,
+                id: vocabularySets.id,
+                ownerId: vocabularySets.ownerId,
+                name: vocabularySets.name,
+                description: vocabularySets.description,
+                sortOrder: vocabularySets.sortOrder,
+                defaultFace: vocabularySets.defaultFace,
+                isShared: vocabularySets.isShared,
+                sharedAt: vocabularySets.sharedAt,
+                clonedFromSetId: vocabularySets.clonedFromSetId,
+                originalOwnerId: vocabularySets.originalOwnerId,
+                createdAt: vocabularySets.createdAt,
+                updatedAt: vocabularySets.updatedAt,
                 ownerName: users.name,
                 originalOwnerName: originalOwner.name,
             })
@@ -106,21 +130,21 @@ class VocabularyRepository {
 
         if (!row) return null;
 
-        const { set, ownerName, originalOwnerName } = row;
-
         return {
-            ...set,
-            owner_id: set.ownerId,
-            owner_name: ownerName || null,
-            original_owner_id: set.originalOwnerId,
-            original_owner_name: originalOwnerName || null,
-            is_shared: set.isShared,
-            shared_at: set.sharedAt,
-            cloned_from_set_id: set.clonedFromSetId,
-            sort_order: set.sortOrder,
-            default_face: set.defaultFace,
-            created_at: set.createdAt,
-            updated_at: set.updatedAt,
+            id: row.id,
+            owner_id: row.ownerId,
+            owner_name: row.ownerName || null,
+            name: row.name,
+            description: row.description,
+            original_owner_id: row.originalOwnerId,
+            original_owner_name: row.originalOwnerName || null,
+            is_shared: row.isShared,
+            shared_at: row.sharedAt,
+            cloned_from_set_id: row.clonedFromSetId,
+            sort_order: row.sortOrder,
+            default_face: row.defaultFace,
+            created_at: row.createdAt,
+            updated_at: row.updatedAt,
         };
     }
 

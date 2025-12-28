@@ -12,8 +12,8 @@ class UserRepository {
     return result[0] || null;
   }
 
-  async findByEmail(email) {
-    const result = await db.select().from(users).where(eq(users.email, email));
+  async findByUsername(username) {
+    const result = await db.select().from(users).where(eq(users.username, username));
     return result[0] || null;
   }
 
