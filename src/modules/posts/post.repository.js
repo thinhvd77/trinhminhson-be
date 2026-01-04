@@ -21,7 +21,7 @@ class PostRepository {
         author: {
           id: users.id,
           name: users.name,
-          email: users.email,
+          username: users.username,
         },
       })
       .from(posts)
@@ -61,7 +61,7 @@ class PostRepository {
         author: {
           id: users.id,
           name: users.name,
-          email: users.email,
+          username: users.username,
         },
       })
       .from(posts)
@@ -88,7 +88,7 @@ class PostRepository {
         author: {
           id: users.id,
           name: users.name,
-          email: users.email,
+          username: users.username,
         },
       })
       .from(posts)

@@ -31,10 +31,15 @@ class VocabularyRepository {
             whereClause = eq(vocabularySets.ownerId, viewerUserId);
         } else {
             // Community: only shared sets; for logged-in users, hide their own sets
-            whereClause = and(
-                eq(vocabularySets.isShared, true),
-                viewerUserId ? or(isNull(vocabularySets.ownerId), ne(vocabularySets.ownerId, viewerUserId)) : sql`TRUE`
-            );
+            if (viewerUserId) {
+                whereClause = and(
+                    eq(vocabularySets.isShared, true),
+                    or(isNull(vocabularySets.ownerId), ne(vocabularySets.ownerId, viewerUserId))
+                );
+            } else {
+                // Guest user - just show shared sets
+                whereClause = eq(vocabularySets.isShared, true);
+            }
         }
 
         // Create alias for original owner
@@ -54,8 +59,8 @@ class VocabularyRepository {
                 originalOwnerId: vocabularySets.originalOwnerId,
                 createdAt: vocabularySets.createdAt,
                 updatedAt: vocabularySets.updatedAt,
-                ownerName: users.name,
-                originalOwnerName: originalOwner.name,
+                ownerName: sql`"users"."name" as owner_name`,
+                originalOwnerName: sql`"original_owner"."name" as original_owner_name`,
             })
             .from(vocabularySets)
             .leftJoin(users, eq(vocabularySets.ownerId, users.id))
@@ -120,8 +125,8 @@ class VocabularyRepository {
                 originalOwnerId: vocabularySets.originalOwnerId,
                 createdAt: vocabularySets.createdAt,
                 updatedAt: vocabularySets.updatedAt,
-                ownerName: users.name,
-                originalOwnerName: originalOwner.name,
+                ownerName: sql`"users"."name" as owner_name`,
+                originalOwnerName: sql`"original_owner"."name" as original_owner_name`,
             })
             .from(vocabularySets)
             .leftJoin(users, eq(vocabularySets.ownerId, users.id))
