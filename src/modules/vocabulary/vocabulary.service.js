@@ -8,6 +8,8 @@ const XLSX = require("xlsx");
 const path = require("path");
 const fs = require("fs");
 
+const MAX_FACES = 10;
+
 class VocabularyService {
     /**
      * Get all vocabulary sets
@@ -81,10 +83,20 @@ class VocabularyService {
             const workbook = XLSX.readFile(filePath);
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const data = XLSX.utils.sheet_to_json(worksheet);
 
-            if (data.length === 0) {
-                throw new Error("Excel file is empty");
+            const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            if (rawData.length < 2) {
+                throw new Error("Excel file must have at least one row of data");
+            }
+
+            const headerRow = rawData[0];
+            const dataRows = rawData.slice(1);
+
+            const faceCount = Math.min(MAX_FACES, headerRow.length);
+
+            if (faceCount == 0) {
+                throw new Error("Excel file has no data columns");
             }
 
             // Create vocabulary set
@@ -93,42 +105,29 @@ class VocabularyService {
                 description,
                 ownerId,
                 isShared: false,
+                faceCount,
             });
 
-            // Parse and create flashcards
-            // Helper to find column value by matching partial key
-            const findValue = (row, ...keys) => {
-                // First try exact match
-                for (const key of keys) {
-                    if (row[key] !== undefined) return row[key];
+            const cards = dataRows
+            .filter(row => row.some(cell => cell !== undefined && cell !== null && cell !== ""))
+            .map((row) => {
+                const card = {};
+                for (let i = 0; i < faceCount; i++) {
+                    card[`face${i + 1}`] = row[i] !== undefined ? String(row[i]) : "";
                 }
-                // Then try case-insensitive partial match for handling encoding issues
-                const rowKeys = Object.keys(row);
-                for (const key of keys) {
-                    const normalizedKey = key.toLowerCase();
-                    for (const rowKey of rowKeys) {
-                        if (rowKey.toLowerCase().includes(normalizedKey) ||
-                            normalizedKey.includes(rowKey.toLowerCase())) {
-                            return row[rowKey];
-                        }
-                    }
-                }
-                return "";
-            };
+                return card;
+            });
 
-            const cards = data.map((row) => ({
-                kanji: findValue(row, "kanji", "Kanji", "漢字"),
-                meaning: findValue(row, "meaning", "Meaning", "Nghĩa", "nghĩa", "nghia"),
-                pronunciation: findValue(row, "pronunciation", "Pronunciation", "Phiên âm", "phien am", "Hiragana", "hiragana", "ひらがな"),
-                sino_vietnamese: findValue(row, "sino_vietnamese", "Sino-Vietnamese", "Hán Việt", "han viet", "HanViet"),
-                example: findValue(row, "example", "Example", "Ví dụ", "vi du", "例文"),
-            }));
+            if (cards.length === 0) {
+                throw new Error("Excel file contains no valid data rows");
+            }
 
-            await vocabularyRepository.createFlashcards(setId, cards);
+            await vocabularyRepository.createFlashcards(setId, cards, faceCount);
 
             return {
                 setId,
                 cardCount: cards.length,
+                faceCount,
             };
         } finally {
             // Clean up uploaded file

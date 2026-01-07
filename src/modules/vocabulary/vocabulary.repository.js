@@ -53,6 +53,7 @@ class VocabularyRepository {
                 description: vocabularySets.description,
                 sortOrder: vocabularySets.sortOrder,
                 defaultFace: vocabularySets.defaultFace,
+                faceCount: vocabularySets.faceCount,
                 isShared: vocabularySets.isShared,
                 sharedAt: vocabularySets.sharedAt,
                 clonedFromSetId: vocabularySets.clonedFromSetId,
@@ -99,6 +100,7 @@ class VocabularyRepository {
             sort_order: row.sortOrder,
             // Community sets always use default face (0), personal sets keep owner's setting
             default_face: isPersonal ? row.defaultFace : 0,
+            face_count: row.faceCount || 5,
             created_at: row.createdAt,
             updated_at: row.updatedAt,
             card_count: countMap.get(row.id) || 0,
@@ -119,6 +121,7 @@ class VocabularyRepository {
                 description: vocabularySets.description,
                 sortOrder: vocabularySets.sortOrder,
                 defaultFace: vocabularySets.defaultFace,
+                faceCount: vocabularySets.faceCount,
                 isShared: vocabularySets.isShared,
                 sharedAt: vocabularySets.sharedAt,
                 clonedFromSetId: vocabularySets.clonedFromSetId,
@@ -148,6 +151,7 @@ class VocabularyRepository {
             cloned_from_set_id: row.clonedFromSetId,
             sort_order: row.sortOrder,
             default_face: row.defaultFace,
+            face_count: row.faceCount || 5,
             created_at: row.createdAt,
             updated_at: row.updatedAt,
         };
@@ -185,14 +189,23 @@ class VocabularyRepository {
             .from(flashcards)
             .where(eq(flashcards.setId, id));
 
+        const faceCount = set.face_count || 5;
+
         return {
             ...set,
-            flashcards: cards.map((card) => ({
-                ...card,
-                set_id: card.setId,
-                sino_vietnamese: card.sinoVietnamese,
-                created_at: card.createdAt,
-            })),
+            flashcards: cards.map((card) => {
+                const mappedCard = {
+                    id: card.id,
+                    set_id: card.setId,
+                    learned: card.learned,
+                    created_at: card.createdAt,
+                };
+                // Map faces based on set's face count
+                for (let i = 1; i <= faceCount; i++) {
+                    mappedCard[`face${i}`] = card[`face${i}`] || "";
+                }
+                return mappedCard;
+            }),
             totalCount: Number(counts.total),
             learnedCount: Number(counts.learned) || 0,
         };
@@ -201,7 +214,7 @@ class VocabularyRepository {
     /**
      * Create a new vocabulary set
      */
-    async createSet({ name, description = "", ownerId = null, isShared = false, clonedFromSetId = null, originalOwnerId = null } = {}) {
+    async createSet({ name, description = "", ownerId = null, isShared = false, clonedFromSetId = null, originalOwnerId = null, faceCount = 5 } = {}) {
         const [result] = await db
             .insert(vocabularySets)
             .values({
@@ -212,6 +225,7 @@ class VocabularyRepository {
                 sharedAt: isShared ? new Date() : null,
                 clonedFromSetId,
                 originalOwnerId,
+                faceCount,
             })
             .returning({ id: vocabularySets.id });
 
@@ -286,16 +300,16 @@ class VocabularyRepository {
      * Create multiple flashcards
      */
     async createFlashcards(setId, cards) {
-        const values = cards.map((card) => ({
-            setId,
-            kanji: card.kanji || "",
-            meaning: card.meaning || "",
-            pronunciation: card.pronunciation || "",
-            sinoVietnamese: card.sino_vietnamese || "",
-            example: card.example || "",
-            learned: false,
-        }));
-
+        const values = cards.map((card) => {
+            const value = {
+                setId,
+                learned: false,
+            };
+            for (let i = 1; i <= 10; i++) {
+                value[`face${i}`] = card[`face${i}`] || "";
+            }
+            return value;
+        });
         await db.insert(flashcards).values(values);
         return cards.length;
     }
