@@ -3,6 +3,7 @@ const {
   createNoteSchema,
   updateNoteSchema,
   noteIdSchema,
+  reorderNotesSchema,
 } = require("./note.schema");
 
 class NoteController {
@@ -62,6 +63,21 @@ class NoteController {
       });
     } catch (error) {
       console.error('Update note error:', error);
+      next(error);
+    }
+  }
+
+  // Reorder notes (admin only)
+  async reorderNotes(req, res, next) {
+    try {
+      const { noteIds } = reorderNotesSchema.parse(req.body);
+      const notes = await noteService.reorderNotes(noteIds);
+      res.json({
+        success: true,
+        data: notes,
+      });
+    } catch (error) {
+      console.error('Reorder notes error:', error);
       next(error);
     }
   }

@@ -13,6 +13,7 @@ const notes = pgTable("notes", {
   y: doublePrecision("y").notNull().default(100),
   rotation: doublePrecision("rotation").notNull().default(0),
   isLocked: boolean("is_locked").notNull().default(false),
+  displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

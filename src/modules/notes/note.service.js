@@ -26,6 +26,10 @@ class NoteService {
     return await noteRepository.update(id, noteData);
   }
 
+  async reorderNotes(noteIds) {
+    return await noteRepository.reorderNotes(noteIds);
+  }
+
   async deleteNote(id) {
     const existingNote = await noteRepository.findById(id);
     if (!existingNote) {

@@ -33,14 +33,20 @@ const updateNoteSchema = z.object({
   y: z.number().optional(),
   rotation: z.number().optional(),
   isLocked: z.boolean().optional(),
+  displayOrder: z.number().optional(),
 });
 
 const noteIdSchema = z.object({
   id: z.string().transform(Number),
 });
 
+const reorderNotesSchema = z.object({
+  noteIds: z.array(z.number()).min(1, "At least one note ID is required"),
+});
+
 module.exports = {
   createNoteSchema,
   updateNoteSchema,
   noteIdSchema,
+  reorderNotesSchema,
 };
