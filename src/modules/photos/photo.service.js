@@ -1,0 +1,148 @@
+/**
+ * Photo Service
+ * Business logic for photos
+ */
+
+const { photoRepository } = require("./photo.repository");
+const path = require("path");
+const fs = require("fs");
+const sharp = require("sharp");
+
+class PhotoService {
+  /**
+   * Get all photos
+   */
+  async getAllPhotos({ category, isPublic, limit, offset } = {}) {
+    return await photoRepository.getAllPhotos({ category, isPublic, limit, offset });
+  }
+
+  /**
+   * Get photo by ID
+   */
+  async getPhotoById(id) {
+    const photo = await photoRepository.getPhotoById(id);
+    if (!photo) {
+      const error = new Error("Photo not found");
+      error.status = 404;
+      throw error;
+    }
+    return photo;
+  }
+
+  /**
+   * Upload and create a new photo
+   * Creates optimized versions: thumbnail (400px), medium (800px), large (1600px)
+   */
+  async uploadPhoto(file, photoData, uploadedBy) {
+    if (!file) {
+      throw new Error("No file uploaded");
+    }
+
+    // Get image dimensions using sharp
+    let width, height, aspectRatio;
+    try {
+      const metadata = await sharp(file.path).metadata();
+      width = metadata.width;
+      height = metadata.height;
+      
+      // Calculate aspect ratio
+      if (width && height) {
+        const ratio = width / height;
+        if (ratio > 1.2) {
+          aspectRatio = "landscape";
+        } else if (ratio < 0.8) {
+          aspectRatio = "portrait";
+        } else {
+          aspectRatio = "square";
+        }
+      }
+
+      // Generate optimized versions
+      const baseName = path.parse(file.filename).name;
+      const uploadDir = "uploads/photos";
+
+      // Thumbnail (400px width)
+      await sharp(file.path)
+        .resize(400, null, { withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toFile(path.join(uploadDir, `${baseName}_thumb.jpg`));
+
+      // Medium (800px width) for gallery
+      await sharp(file.path)
+        .resize(800, null, { withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toFile(path.join(uploadDir, `${baseName}_medium.jpg`));
+
+      // Large (1600px width) for lightbox
+      await sharp(file.path)
+        .resize(1600, null, { withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toFile(path.join(uploadDir, `${baseName}_large.jpg`));
+
+    } catch (err) {
+      console.error("Failed to process image:", err);
+    }
+
+    const photo = await photoRepository.createPhoto({
+      title: photoData.title,
+      filename: file.filename,
+      originalName: file.originalname,
+      alt: photoData.alt || photoData.title,
+      location: photoData.location,
+      category: photoData.category,
+      dateTaken: photoData.dateTaken,
+      aspectRatio: aspectRatio || photoData.aspectRatio || "landscape",
+      width,
+      height,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      uploadedBy,
+      isPublic: photoData.isPublic !== false,
+    });
+
+    return photo;
+  }
+
+  /**
+   * Update a photo
+   */
+  async updatePhoto(id, photoData) {
+    const photo = await photoRepository.updatePhoto(id, photoData);
+    if (!photo) {
+      const error = new Error("Photo not found");
+      error.status = 404;
+      throw error;
+    }
+    return photo;
+  }
+
+  /**
+   * Delete a photo
+   */
+  async deletePhoto(id) {
+    const photo = await photoRepository.getPhotoById(id);
+    if (!photo) {
+      const error = new Error("Photo not found");
+      error.status = 404;
+      throw error;
+    }
+
+    // Delete file from disk
+    const filePath = path.join("uploads/photos", photo.filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    await photoRepository.deletePhoto(id);
+    return { message: "Photo deleted successfully" };
+  }
+
+  /**
+   * Get all categories
+   */
+  async getCategories() {
+    return await photoRepository.getCategories();
+  }
+}
+
+module.exports = { photoService: new PhotoService() };

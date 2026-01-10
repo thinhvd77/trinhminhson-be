@@ -86,14 +86,16 @@ class VocabularyService {
 
             const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-            if (rawData.length < 2) {
+            if (rawData.length < 1) {
                 throw new Error("Excel file must have at least one row of data");
             }
 
-            const headerRow = rawData[0];
-            const dataRows = rawData.slice(1);
+            // Get all rows as data (no header row distinction)
+            const dataRows = rawData;
 
-            const faceCount = Math.min(MAX_FACES, headerRow.length);
+            // Determine face count from the first row with data
+            const firstRow = dataRows.find(row => row && row.length > 0) || [];
+            const faceCount = Math.min(MAX_FACES, firstRow.length);
 
             if (faceCount == 0) {
                 throw new Error("Excel file has no data columns");
