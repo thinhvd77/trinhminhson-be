@@ -42,8 +42,20 @@ async function getPhotoById(req, res, next) {
 async function uploadPhoto(req, res, next) {
   try {
     const file = req.file;
-    const { title, alt, location, category, dateTaken, isPublic } = req.body;
+    const { title, alt, location, category, subcategoryIds, dateTaken, isPublic } = req.body;
     const uploadedBy = req.user?.id;
+
+    // Parse subcategoryIds if it's a JSON string
+    let parsedSubcategoryIds = [];
+    if (subcategoryIds) {
+      try {
+        parsedSubcategoryIds = typeof subcategoryIds === 'string' 
+          ? JSON.parse(subcategoryIds) 
+          : subcategoryIds;
+      } catch (e) {
+        console.error('Failed to parse subcategoryIds:', e);
+      }
+    }
 
     const photo = await photoService.uploadPhoto(
       file,
@@ -52,6 +64,7 @@ async function uploadPhoto(req, res, next) {
         alt,
         location,
         category,
+        subcategoryIds: parsedSubcategoryIds,
         dateTaken,
         isPublic: isPublic === "true" || isPublic === true,
       },

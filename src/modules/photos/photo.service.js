@@ -4,20 +4,38 @@
  */
 
 const { photoRepository } = require("./photo.repository");
+const categoryRepository = require("./category.repository");
 const path = require("path");
 const fs = require("fs");
 const sharp = require("sharp");
 
 class PhotoService {
   /**
-   * Get all photos
+   * Get all photos with their subcategories
    */
   async getAllPhotos({ category, isPublic, limit, offset } = {}) {
-    return await photoRepository.getAllPhotos({ category, isPublic, limit, offset });
+    const photos = await photoRepository.getAllPhotos({ category, isPublic, limit, offset });
+    
+    // Fetch subcategories for each photo
+    const photosWithSubcategories = await Promise.all(
+      photos.map(async (photo) => {
+        const subcategories = await categoryRepository.getPhotoSubcategories(photo.id);
+        return {
+          ...photo,
+          subcategories: subcategories.map(sub => ({
+            id: sub.id,
+            name: sub.name,
+            slug: sub.slug,
+          })),
+        };
+      })
+    );
+    
+    return photosWithSubcategories;
   }
 
   /**
-   * Get photo by ID
+   * Get photo by ID with subcategories
    */
   async getPhotoById(id) {
     const photo = await photoRepository.getPhotoById(id);
@@ -26,7 +44,17 @@ class PhotoService {
       error.status = 404;
       throw error;
     }
-    return photo;
+    
+    // Get subcategories for this photo
+    const subcategories = await categoryRepository.getPhotoSubcategories(id);
+    return {
+      ...photo,
+      subcategories: subcategories.map(sub => ({
+        id: sub.id,
+        name: sub.name,
+        slug: sub.slug,
+      })),
+    };
   }
 
   /**
@@ -99,6 +127,15 @@ class PhotoService {
       uploadedBy,
       isPublic: photoData.isPublic !== false,
     });
+
+    // Link subcategories if provided
+    if (photoData.subcategoryIds && photoData.subcategoryIds.length > 0) {
+      try {
+        await categoryRepository.setPhotoSubcategories(photo.id, photoData.subcategoryIds);
+      } catch (err) {
+        console.error("Failed to link subcategories:", err);
+      }
+    }
 
     return photo;
   }
