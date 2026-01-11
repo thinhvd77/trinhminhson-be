@@ -7,6 +7,7 @@ const { Router } = require("express");
 const multer = require("multer");
 const path = require("path");
 const { authMiddleware } = require("../../shared/middlewares/auth.middleware");
+const { uploadLimiter, passwordChangeLimiter } = require("../../shared/middlewares/rate-limit.middleware");
 const {
   getProfile,
   updateProfile,
@@ -17,14 +18,18 @@ const {
 
 const router = Router();
 
-// Configure multer for avatar upload
+// Configure multer for avatar upload with security measures
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/avatars");
   },
   filename: (req, file, cb) => {
+    // Generate secure filename to prevent path traversal
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "avatar-" + uniqueSuffix + path.extname(file.originalname));
+    // Sanitize extension and only allow safe characters
+    const ext = path.extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
+    const safeExt = ['.jpeg', '.jpg', '.png', '.gif', '.webp'].includes(ext) ? ext : '.jpg';
+    cb(null, "avatar-" + uniqueSuffix + safeExt);
   },
 });
 
@@ -46,8 +51,8 @@ const upload = multer({
 // All profile routes require authentication
 router.get("/profile", authMiddleware, getProfile);
 router.patch("/profile", authMiddleware, updateProfile);
-router.post("/profile/avatar", authMiddleware, upload.single("avatar"), uploadAvatar);
+router.post("/profile/avatar", authMiddleware, uploadLimiter, upload.single("avatar"), uploadAvatar);
 router.delete("/profile/avatar", authMiddleware, deleteAvatar);
-router.patch("/profile/password", authMiddleware, changePassword);
+router.patch("/profile/password", authMiddleware, passwordChangeLimiter, changePassword);
 
 module.exports = { profileRoutes: router };

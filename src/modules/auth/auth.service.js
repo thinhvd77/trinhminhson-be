@@ -1,12 +1,13 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { UserRepository } = require("../users/user.repository");
+const { config } = require("../../shared/config/env");
 
 const userRepository = new UserRepository();
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "your-super-secret-key-change-this-in-production";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+// Use centralized config for JWT settings
+const JWT_SECRET = config.jwtSecret;
+const JWT_EXPIRES_IN = config.jwtExpiresIn;
 const SALT_ROUNDS = 10;
 
 class AuthService {

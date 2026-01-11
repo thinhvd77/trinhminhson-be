@@ -9,6 +9,7 @@ const path = require("path");
 const fs = require("fs");
 const { vocabularyController } = require("./vocabulary.controller");
 const { authMiddleware, optionalAuthMiddleware } = require("../../shared/middlewares/auth.middleware");
+const { uploadLimiter } = require("../../shared/middlewares/rate-limit.middleware");
 
 const router = Router();
 
@@ -18,14 +19,18 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for file uploads
+// Configure multer for file uploads with security measures
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
+        // Generate secure filename to prevent path traversal
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        // Sanitize extension and only allow safe characters
+        const ext = path.extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
+        const safeExt = ['.xlsx', '.xls'].includes(ext) ? ext : '.xlsx';
+        cb(null, uniqueSuffix + safeExt);
     },
 });
 
@@ -53,8 +58,8 @@ router.get("/vocabulary/sets/:id", optionalAuthMiddleware, (req, res) =>
     vocabularyController.getSet(req, res)
 );
 
-// Protected routes (authentication required)
-router.post("/vocabulary/upload", authMiddleware, upload.single("file"), (req, res) =>
+// Protected routes (authentication required + rate limiting for uploads)
+router.post("/vocabulary/upload", authMiddleware, uploadLimiter, upload.single("file"), (req, res) =>
     vocabularyController.uploadSet(req, res)
 );
 

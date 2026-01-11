@@ -15,7 +15,7 @@ class PhotoService {
    */
   async getAllPhotos({ category, isPublic, limit, offset } = {}) {
     const photos = await photoRepository.getAllPhotos({ category, isPublic, limit, offset });
-    
+
     // Fetch subcategories for each photo
     const photosWithSubcategories = await Promise.all(
       photos.map(async (photo) => {
@@ -30,7 +30,7 @@ class PhotoService {
         };
       })
     );
-    
+
     return photosWithSubcategories;
   }
 
@@ -44,7 +44,7 @@ class PhotoService {
       error.status = 404;
       throw error;
     }
-    
+
     // Get subcategories for this photo
     const subcategories = await categoryRepository.getPhotoSubcategories(id);
     return {
@@ -72,7 +72,7 @@ class PhotoService {
       const metadata = await sharp(file.path).metadata();
       width = metadata.width;
       height = metadata.height;
-      
+
       // Calculate aspect ratio
       if (width && height) {
         const ratio = width / height;
@@ -150,7 +150,26 @@ class PhotoService {
       error.status = 404;
       throw error;
     }
-    return photo;
+
+    // Update subcategories if provided
+    if (photoData.subcategoryIds !== undefined) {
+      try {
+        await categoryRepository.setPhotoSubcategories(id, photoData.subcategoryIds || []);
+      } catch (err) {
+        console.error("Failed to update subcategories:", err);
+      }
+    }
+
+    // Fetch updated subcategories to return
+    const subcategories = await categoryRepository.getPhotoSubcategories(id);
+    return {
+      ...photo,
+      subcategories: subcategories.map(sub => ({
+        id: sub.id,
+        name: sub.name,
+        slug: sub.slug,
+      })),
+    };
   }
 
   /**
@@ -179,6 +198,46 @@ class PhotoService {
    */
   async getCategories() {
     return await photoRepository.getCategories();
+  }
+
+  /**
+   * Bulk upload photos with shared metadata (Album upload)
+   * All photos share the same category, subcategories, location, and dateTaken
+   */
+  async bulkUploadPhotos(files, sharedData, uploadedBy) {
+    if (!files || files.length === 0) {
+      throw new Error("No files uploaded");
+    }
+
+    const uploadedPhotos = [];
+    const errors = [];
+
+    for (const file of files) {
+      try {
+        // Generate title from filename (remove extension)
+        const title = path.parse(file.originalname).name;
+
+        const photo = await this.uploadPhoto(
+          file,
+          {
+            title,
+            alt: title,
+            location: sharedData.location,
+            category: sharedData.category,
+            subcategoryIds: sharedData.subcategoryIds || [],
+            dateTaken: sharedData.dateTaken,
+            isPublic: sharedData.isPublic !== false,
+          },
+          uploadedBy
+        );
+        uploadedPhotos.push(photo);
+      } catch (error) {
+        console.error(`Failed to upload ${file.originalname}:`, error);
+        errors.push({ filename: file.originalname, error: error.message });
+      }
+    }
+
+    return { uploaded: uploadedPhotos, errors };
   }
 }
 
