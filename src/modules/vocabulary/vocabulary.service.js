@@ -21,6 +21,11 @@ class VocabularyService {
 
     /**
      * Get a vocabulary set with flashcards
+     * 
+     * For owners: Returns cards filtered by learned status (based on includeAll param)
+     * For non-owners (community users): ALWAYS returns ALL cards with learned=false
+     *   - This ensures community users see the complete vocabulary set
+     *   - The owner's learning progress does NOT affect what community users see
      */
     async getSetWithFlashcards(id, { viewerUserId = null, includeAll = false } = {}) {
         const setMeta = await vocabularyRepository.getSetById(id);
@@ -35,22 +40,25 @@ class VocabularyService {
             throw new Error("Vocabulary set not found");
         }
 
+        // IMPORTANT: For non-owners (community users), ALWAYS include all cards
+        // This ensures the owner's learning progress doesn't affect community view
         const effectiveIncludeAll = isOwner ? includeAll : true;
         const full = await vocabularyRepository.getSetWithFlashcards(id, effectiveIncludeAll);
         if (!full) {
             throw new Error("Vocabulary set not found");
         }
 
-        // For non-owners, return preview-only data (no learned tracking, default settings)
+        // For non-owners: return ALL cards with fresh (unlearned) state
+        // The owner's learned status is completely ignored for community view
         if (!isOwner) {
             return {
                 ...full,
                 is_owner: false,
                 default_face: 0, // Community sets always use default face order
-                learnedCount: 0,
+                learnedCount: 0, // Community users start fresh
                 flashcards: (full.flashcards || []).map((c) => ({
                     ...c,
-                    learned: false,
+                    learned: false, // All cards appear as unlearned for community users
                 })),
             };
         }
@@ -224,15 +232,17 @@ class VocabularyService {
             // Lưu ID tác giả gốc: nếu bộ từ đã được clone thì giữ nguyên original_owner_id, 
             // ngược lại lưu owner_id của bộ từ nguồn
             originalOwnerId: set.original_owner_id || set.owner_id,
+            faceCount: set.face_count || 5,
         });
 
-        const cardsToCreate = (sourceCards || []).map((c) => ({
-            kanji: c.kanji,
-            meaning: c.meaning,
-            pronunciation: c.pronunciation,
-            sino_vietnamese: c.sinoVietnamese,
-            example: c.example,
-        }));
+        // Map source cards to new cards format (face1, face2, ..., face10)
+        const cardsToCreate = (sourceCards || []).map((c) => {
+            const card = {};
+            for (let i = 1; i <= 10; i++) {
+                card[`face${i}`] = c[`face${i}`] || "";
+            }
+            return card;
+        });
 
         await vocabularyRepository.createFlashcards(newSetId, cardsToCreate);
 

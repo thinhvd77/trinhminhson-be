@@ -6,7 +6,7 @@
 const { db } = require("../../shared/core/db");
 const { vocabularySets, flashcards } = require("./vocabulary.model");
 const { users } = require("../users/user.model");
-const { eq, sql, and, or, isNull, inArray, ne, desc } = require("drizzle-orm");
+const { eq, sql, and, or, isNull, inArray, ne, desc, asc } = require("drizzle-orm");
 const { alias } = require("drizzle-orm/pg-core");
 
 class VocabularyRepository {
@@ -159,14 +159,29 @@ class VocabularyRepository {
 
     /**
      * Get a vocabulary set with its flashcards
+     * 
+     * @param {number} id - Set ID
+     * @param {boolean} includeAll - If true, returns ALL cards regardless of learned status
+     *                               If false, returns only unlearned cards (learned=false or null)
+     * 
+     * IMPORTANT: For community users, the service layer should ALWAYS call this with includeAll=true
+     * to ensure the owner's learning progress doesn't affect the community view.
      */
     async getSetWithFlashcards(id, includeAll = false) {
         const set = await this.getSetById(id);
         if (!set) return null;
 
-        let flashcardsQuery = db.select().from(flashcards).where(eq(flashcards.setId, id));
+        // When includeAll=true: return ALL cards (for community view or "show all" mode)
+        // When includeAll=false: return only unlearned cards (for owner's study mode)
+        // IMPORTANT: Always order by ID to ensure consistent ordering across all views
+        let flashcardsQuery = db
+            .select()
+            .from(flashcards)
+            .where(eq(flashcards.setId, id))
+            .orderBy(asc(flashcards.id));
 
         if (!includeAll) {
+            // Filter to only unlearned cards (for owner studying)
             flashcardsQuery = db
                 .select()
                 .from(flashcards)
@@ -175,7 +190,8 @@ class VocabularyRepository {
                         eq(flashcards.setId, id),
                         or(eq(flashcards.learned, false), isNull(flashcards.learned))
                     )
-                );
+                )
+                .orderBy(asc(flashcards.id));
         }
 
         const cards = await flashcardsQuery;
@@ -363,12 +379,17 @@ class VocabularyRepository {
 
     /**
      * Fetch a set with ALL flashcards (including learned) for cloning.
+     * Ordered by ID to maintain original order from upload.
      */
     async getSetWithAllFlashcardsForClone(id) {
         const set = await this.getSetById(id);
         if (!set) return null;
 
-        const cards = await db.select().from(flashcards).where(eq(flashcards.setId, id));
+        const cards = await db
+            .select()
+            .from(flashcards)
+            .where(eq(flashcards.setId, id))
+            .orderBy(asc(flashcards.id));
         return {
             set,
             flashcards: cards,
