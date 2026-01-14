@@ -1,6 +1,8 @@
 const express = require("express");
+const cors = require("cors");
 const helmet = require("helmet");
 const path = require("path");
+const { config } = require("./shared/config/env");
 const { requestLogger } = require("./shared/middlewares/request-logger");
 const { notFoundHandler, errorHandler } = require("./shared/middlewares/error.middleware");
 const { generalLimiter } = require("./shared/middlewares/rate-limit.middleware");
@@ -30,6 +32,16 @@ function createApp() {
     },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   }));
+
+  // CORS for development environment only
+  if (config.nodeEnv === 'development') {
+    app.use(cors({
+      origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    }));
+  }
 
   // General rate limiting
   app.use(generalLimiter);

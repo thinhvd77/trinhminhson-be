@@ -42,10 +42,9 @@ async function getPhotoById(req, res, next) {
 async function uploadPhoto(req, res, next) {
   try {
     const file = req.file;
-    const { title, alt, location, category, subcategoryIds, dateTaken, isPublic } = req.body;
+    const { title, category, subcategoryIds, dateTaken, isPublic } = req.body;
     const uploadedBy = req.user?.id;
 
-    // Parse subcategoryIds if it's a JSON string
     let parsedSubcategoryIds = [];
     if (subcategoryIds) {
       try {
@@ -61,8 +60,6 @@ async function uploadPhoto(req, res, next) {
       file,
       {
         title,
-        alt,
-        location,
         category,
         subcategoryIds: parsedSubcategoryIds,
         dateTaken,
@@ -116,58 +113,6 @@ async function getCategories(req, res, next) {
   }
 }
 
-/**
- * Bulk upload photos with shared metadata (Album upload)
- */
-async function bulkUploadPhotos(req, res, next) {
-  try {
-    const files = req.files;
-    const { category, subcategoryIds, location, dateTaken, isPublic } = req.body;
-    const uploadedBy = req.user?.id;
-
-    if (!files || files.length === 0) {
-      return res.status(400).json({ error: "No files uploaded" });
-    }
-
-    if (!category) {
-      return res.status(400).json({ error: "Category is required" });
-    }
-
-    // Parse subcategoryIds if it's a JSON string
-    let parsedSubcategoryIds = [];
-    if (subcategoryIds) {
-      try {
-        parsedSubcategoryIds = typeof subcategoryIds === 'string'
-          ? JSON.parse(subcategoryIds)
-          : subcategoryIds;
-      } catch (e) {
-        console.error('Failed to parse subcategoryIds:', e);
-      }
-    }
-
-    const result = await photoService.bulkUploadPhotos(
-      files,
-      {
-        category,
-        subcategoryIds: parsedSubcategoryIds,
-        location,
-        dateTaken,
-        isPublic: isPublic === "true" || isPublic === true,
-      },
-      uploadedBy
-    );
-
-    res.status(201).json({
-      message: `Successfully uploaded ${result.uploaded.length} photos`,
-      uploaded: result.uploaded,
-      errors: result.errors,
-      total: files.length,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
 module.exports = {
   getAllPhotos,
   getPhotoById,
@@ -175,5 +120,4 @@ module.exports = {
   updatePhoto,
   deletePhoto,
   getCategories,
-  bulkUploadPhotos,
 };

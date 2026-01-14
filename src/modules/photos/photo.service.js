@@ -115,8 +115,6 @@ class PhotoService {
       title: photoData.title,
       filename: file.filename,
       originalName: file.originalname,
-      alt: photoData.alt || photoData.title,
-      location: photoData.location,
       category: photoData.category,
       dateTaken: photoData.dateTaken,
       aspectRatio: aspectRatio || photoData.aspectRatio || "landscape",
@@ -198,46 +196,6 @@ class PhotoService {
    */
   async getCategories() {
     return await photoRepository.getCategories();
-  }
-
-  /**
-   * Bulk upload photos with shared metadata (Album upload)
-   * All photos share the same category, subcategories, location, and dateTaken
-   */
-  async bulkUploadPhotos(files, sharedData, uploadedBy) {
-    if (!files || files.length === 0) {
-      throw new Error("No files uploaded");
-    }
-
-    const uploadedPhotos = [];
-    const errors = [];
-
-    for (const file of files) {
-      try {
-        // Generate title from filename (remove extension)
-        const title = path.parse(file.originalname).name;
-
-        const photo = await this.uploadPhoto(
-          file,
-          {
-            title,
-            alt: title,
-            location: sharedData.location,
-            category: sharedData.category,
-            subcategoryIds: sharedData.subcategoryIds || [],
-            dateTaken: sharedData.dateTaken,
-            isPublic: sharedData.isPublic !== false,
-          },
-          uploadedBy
-        );
-        uploadedPhotos.push(photo);
-      } catch (error) {
-        console.error(`Failed to upload ${file.originalname}:`, error);
-        errors.push({ filename: file.originalname, error: error.message });
-      }
-    }
-
-    return { uploaded: uploadedPhotos, errors };
   }
 }
 

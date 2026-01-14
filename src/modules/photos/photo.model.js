@@ -12,8 +12,6 @@ const photos = pgTable("photos", {
   title: varchar("title", { length: 255 }).notNull(),
   filename: varchar("filename", { length: 255 }).notNull(),
   originalName: varchar("original_name", { length: 255 }),
-  alt: text("alt"),
-  location: varchar("location", { length: 255 }),
   category: varchar("category", { length: 100 }).notNull(),
   dateTaken: timestamp("date_taken"),
   aspectRatio: varchar("aspect_ratio", { length: 20 }).default("landscape"),

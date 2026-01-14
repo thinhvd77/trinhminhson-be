@@ -19,8 +19,6 @@ class PhotoRepository {
         title: photos.title,
         filename: photos.filename,
         originalName: photos.originalName,
-        alt: photos.alt,
-        location: photos.location,
         category: photos.category,
         dateTaken: photos.dateTaken,
         aspectRatio: photos.aspectRatio,
@@ -85,8 +83,6 @@ class PhotoRepository {
         title: photoData.title,
         filename: photoData.filename,
         originalName: photoData.originalName,
-        alt: photoData.alt,
-        location: photoData.location,
         category: photoData.category,
         dateTaken: photoData.dateTaken ? new Date(photoData.dateTaken) : null,
         aspectRatio: photoData.aspectRatio || "landscape",
@@ -111,8 +107,6 @@ class PhotoRepository {
     };
 
     if (photoData.title !== undefined) updateData.title = photoData.title;
-    if (photoData.alt !== undefined) updateData.alt = photoData.alt;
-    if (photoData.location !== undefined) updateData.location = photoData.location;
     if (photoData.category !== undefined) updateData.category = photoData.category;
     if (photoData.dateTaken !== undefined) updateData.dateTaken = new Date(photoData.dateTaken);
     if (photoData.aspectRatio !== undefined) updateData.aspectRatio = photoData.aspectRatio;
@@ -183,8 +177,6 @@ class PhotoRepository {
       title: photo.title,
       filename: photo.filename,
       original_name: photo.originalName,
-      alt: photo.alt,
-      location: photo.location,
       category: photo.category,
       date_taken: photo.dateTaken,
       aspect_ratio: photo.aspectRatio,
