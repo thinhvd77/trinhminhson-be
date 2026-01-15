@@ -11,10 +11,11 @@ const { users } = require("../users/user.model");
 const photoComments = pgTable("photo_comments", {
     id: serial("id").primaryKey(),
     photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }).notNull(),
-    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }), // null for guests
-    guestName: varchar("guest_name", { length: 100 }), // for guest commenters
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    guestName: varchar("guest_name", { length: 100 }),
     content: text("content").notNull(),
-    isAnonymous: boolean("is_anonymous").default(false).notNull(), // logged-in users posting anonymously
+    imageUrl: varchar("image_url", { length: 500 }),
+    isAnonymous: boolean("is_anonymous").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

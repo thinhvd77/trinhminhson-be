@@ -10,9 +10,9 @@ const { photoService } = require("./photo.service");
  */
 async function getAllPhotos(req, res, next) {
   try {
-    const { category, limit, offset } = req.query;
+    const { categoryId, limit, offset } = req.query;
     const photos = await photoService.getAllPhotos({
-      category,
+      categoryId: categoryId ? parseInt(categoryId) : undefined,
       isPublic: true,
       limit: limit ? parseInt(limit) : undefined,
       offset: offset ? parseInt(offset) : undefined,
@@ -42,9 +42,22 @@ async function getPhotoById(req, res, next) {
 async function uploadPhoto(req, res, next) {
   try {
     const file = req.file;
-    const { title, category, subcategoryIds, dateTaken, isPublic } = req.body;
+    const { title, categoryIds, subcategoryIds, dateTaken, isPublic } = req.body;
     const uploadedBy = req.user?.id;
 
+    // Parse categoryIds
+    let parsedCategoryIds = [];
+    if (categoryIds) {
+      try {
+        parsedCategoryIds = typeof categoryIds === 'string'
+          ? JSON.parse(categoryIds)
+          : categoryIds;
+      } catch (e) {
+        console.error('Failed to parse categoryIds:', e);
+      }
+    }
+
+    // Parse subcategoryIds
     let parsedSubcategoryIds = [];
     if (subcategoryIds) {
       try {
@@ -60,7 +73,7 @@ async function uploadPhoto(req, res, next) {
       file,
       {
         title,
-        category,
+        categoryIds: parsedCategoryIds,
         subcategoryIds: parsedSubcategoryIds,
         dateTaken,
         isPublic: isPublic === "true" || isPublic === true,
@@ -102,12 +115,16 @@ async function deletePhoto(req, res, next) {
 }
 
 /**
- * Get all categories
+ * Reorder photos
  */
-async function getCategories(req, res, next) {
+async function reorderPhotos(req, res, next) {
   try {
-    const categories = await photoService.getCategories();
-    res.json(categories);
+    const { orderedPhotos } = req.body;
+    if (!Array.isArray(orderedPhotos)) {
+      return res.status(400).json({ error: "orderedPhotos must be an array" });
+    }
+    const result = await photoService.reorderPhotos(orderedPhotos);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -119,5 +136,5 @@ module.exports = {
   uploadPhoto,
   updatePhoto,
   deletePhoto,
-  getCategories,
+  reorderPhotos,
 };

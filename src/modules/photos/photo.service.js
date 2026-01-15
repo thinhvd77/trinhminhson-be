@@ -11,17 +11,33 @@ const sharp = require("sharp");
 
 class PhotoService {
   /**
-   * Get all photos with their subcategories
+   * Get all photos with their categories and subcategories
    */
-  async getAllPhotos({ category, isPublic, limit, offset } = {}) {
-    const photos = await photoRepository.getAllPhotos({ category, isPublic, limit, offset });
+  async getAllPhotos({ categoryId, isPublic, limit, offset } = {}) {
+    // If filtering by category, get photo IDs first
+    let photoIds = null;
+    if (categoryId) {
+      photoIds = await categoryRepository.getPhotoIdsByCategory(categoryId);
+      if (photoIds.length === 0) {
+        return [];
+      }
+    }
 
-    // Fetch subcategories for each photo
-    const photosWithSubcategories = await Promise.all(
+    const photos = await photoRepository.getAllPhotos({ photoIds, isPublic, limit, offset });
+
+    const photosWithRelations = await Promise.all(
       photos.map(async (photo) => {
-        const subcategories = await categoryRepository.getPhotoSubcategories(photo.id);
+        const [categories, subcategories] = await Promise.all([
+          categoryRepository.getPhotoCategories(photo.id),
+          categoryRepository.getPhotoSubcategories(photo.id),
+        ]);
         return {
           ...photo,
+          categories: categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            slug: cat.slug,
+          })),
           subcategories: subcategories.map(sub => ({
             id: sub.id,
             name: sub.name,
@@ -31,11 +47,11 @@ class PhotoService {
       })
     );
 
-    return photosWithSubcategories;
+    return photosWithRelations;
   }
 
   /**
-   * Get photo by ID with subcategories
+   * Get photo by ID with categories and subcategories
    */
   async getPhotoById(id) {
     const photo = await photoRepository.getPhotoById(id);
@@ -45,10 +61,18 @@ class PhotoService {
       throw error;
     }
 
-    // Get subcategories for this photo
-    const subcategories = await categoryRepository.getPhotoSubcategories(id);
+    // Get categories and subcategories for this photo
+    const [categories, subcategories] = await Promise.all([
+      categoryRepository.getPhotoCategories(id),
+      categoryRepository.getPhotoSubcategories(id),
+    ]);
     return {
       ...photo,
+      categories: categories.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+      })),
       subcategories: subcategories.map(sub => ({
         id: sub.id,
         name: sub.name,
@@ -85,27 +109,28 @@ class PhotoService {
         }
       }
 
-      // Generate optimized versions
+      // Generate optimized WebP versions for display
+      // Original file is kept for download
       const baseName = path.parse(file.filename).name;
       const uploadDir = "uploads/photos";
 
-      // Thumbnail (400px width)
+      // Thumbnail (400px width) - WebP for grid
       await sharp(file.path)
         .resize(400, null, { withoutEnlargement: true })
-        .jpeg({ quality: 80 })
-        .toFile(path.join(uploadDir, `${baseName}_thumb.jpg`));
+        .webp({ quality: 80 })
+        .toFile(path.join(uploadDir, `${baseName}_thumb.webp`));
 
-      // Medium (800px width) for gallery
+      // Medium (800px width) - WebP for gallery
       await sharp(file.path)
         .resize(800, null, { withoutEnlargement: true })
-        .jpeg({ quality: 85 })
-        .toFile(path.join(uploadDir, `${baseName}_medium.jpg`));
+        .webp({ quality: 85 })
+        .toFile(path.join(uploadDir, `${baseName}_medium.webp`));
 
-      // Large (1600px width) for lightbox
+      // Large (1600px width) - WebP for lightbox
       await sharp(file.path)
         .resize(1600, null, { withoutEnlargement: true })
-        .jpeg({ quality: 90 })
-        .toFile(path.join(uploadDir, `${baseName}_large.jpg`));
+        .webp({ quality: 90 })
+        .toFile(path.join(uploadDir, `${baseName}_large.webp`));
 
     } catch (err) {
       console.error("Failed to process image:", err);
@@ -115,7 +140,6 @@ class PhotoService {
       title: photoData.title,
       filename: file.filename,
       originalName: file.originalname,
-      category: photoData.category,
       dateTaken: photoData.dateTaken,
       aspectRatio: aspectRatio || photoData.aspectRatio || "landscape",
       width,
@@ -126,7 +150,16 @@ class PhotoService {
       isPublic: photoData.isPublic !== false,
     });
 
-    // Link subcategories if provided
+    // Link categories
+    if (photoData.categoryIds && photoData.categoryIds.length > 0) {
+      try {
+        await categoryRepository.setPhotoCategories(photo.id, photoData.categoryIds);
+      } catch (err) {
+        console.error("Failed to link categories:", err);
+      }
+    }
+
+    // Link subcategories
     if (photoData.subcategoryIds && photoData.subcategoryIds.length > 0) {
       try {
         await categoryRepository.setPhotoSubcategories(photo.id, photoData.subcategoryIds);
@@ -135,7 +168,8 @@ class PhotoService {
       }
     }
 
-    return photo;
+    // Return photo with relations
+    return this.getPhotoById(photo.id);
   }
 
   /**
@@ -149,6 +183,15 @@ class PhotoService {
       throw error;
     }
 
+    // Update categories if provided
+    if (photoData.categoryIds !== undefined) {
+      try {
+        await categoryRepository.setPhotoCategories(id, photoData.categoryIds || []);
+      } catch (err) {
+        console.error("Failed to update categories:", err);
+      }
+    }
+
     // Update subcategories if provided
     if (photoData.subcategoryIds !== undefined) {
       try {
@@ -158,16 +201,8 @@ class PhotoService {
       }
     }
 
-    // Fetch updated subcategories to return
-    const subcategories = await categoryRepository.getPhotoSubcategories(id);
-    return {
-      ...photo,
-      subcategories: subcategories.map(sub => ({
-        id: sub.id,
-        name: sub.name,
-        slug: sub.slug,
-      })),
-    };
+    // Return photo with updated relations
+    return this.getPhotoById(id);
   }
 
   /**
@@ -192,10 +227,15 @@ class PhotoService {
   }
 
   /**
-   * Get all categories
+   * Reorder photos by updating displayOrder
+   * @param {Array<{id: number, displayOrder: number}>} orderedPhotos
    */
-  async getCategories() {
-    return await photoRepository.getCategories();
+  async reorderPhotos(orderedPhotos) {
+    const updates = orderedPhotos.map(({ id, displayOrder }) =>
+      photoRepository.updatePhoto(id, { displayOrder })
+    );
+    await Promise.all(updates);
+    return { message: "Photos reordered successfully" };
   }
 }
 

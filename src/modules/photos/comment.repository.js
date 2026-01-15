@@ -20,6 +20,7 @@ class CommentRepository {
                 userId: photoComments.userId,
                 guestName: photoComments.guestName,
                 content: photoComments.content,
+                imageUrl: photoComments.imageUrl,
                 isAnonymous: photoComments.isAnonymous,
                 createdAt: photoComments.createdAt,
                 userName: users.name,
@@ -45,6 +46,7 @@ class CommentRepository {
                 userId: data.userId || null,
                 guestName: data.guestName || null,
                 content: data.content,
+                imageUrl: data.imageUrl || null,
                 isAnonymous: data.isAnonymous || false,
             })
             .returning();

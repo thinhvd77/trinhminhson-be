@@ -31,6 +31,14 @@ const photoSubcategories = pgTable("photo_subcategories", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Junction table for photo-category relationships (many-to-many)
+const photoCategoryRelations = pgTable("photo_category_relations", {
+  id: serial("id").primaryKey(),
+  photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }).notNull(),
+  categoryId: integer("category_id").references(() => photoCategories.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Junction table for photo-subcategory relationships (many-to-many)
 const photoSubcategoryRelations = pgTable("photo_subcategory_relations", {
   id: serial("id").primaryKey(),
@@ -42,5 +50,6 @@ const photoSubcategoryRelations = pgTable("photo_subcategory_relations", {
 module.exports = {
   photoCategories,
   photoSubcategories,
+  photoCategoryRelations,
   photoSubcategoryRelations,
 };

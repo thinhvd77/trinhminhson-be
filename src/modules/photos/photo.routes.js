@@ -15,7 +15,7 @@ const {
   uploadPhoto,
   updatePhoto,
   deletePhoto,
-  getCategories,
+  reorderPhotos,
 } = require("./photo.controller");
 
 const router = Router();
@@ -56,11 +56,11 @@ const upload = multer({
 
 // Public routes
 router.get("/photos", getAllPhotos);
-router.get("/photos/categories", getCategories);
 router.get("/photos/:id", getPhotoById);
 
 // Protected routes
 router.post("/photos", authMiddleware, uploadLimiter, upload.single("file"), uploadPhoto);
+router.patch("/photos/reorder", authMiddleware, reorderPhotos);
 router.patch("/photos/:id", authMiddleware, updatePhoto);
 router.delete("/photos/:id", authMiddleware, deletePhoto);
 

@@ -12,7 +12,8 @@ const photos = pgTable("photos", {
   title: varchar("title", { length: 255 }).notNull(),
   filename: varchar("filename", { length: 255 }).notNull(),
   originalName: varchar("original_name", { length: 255 }),
-  category: varchar("category", { length: 100 }).notNull(),
+  // category column is deprecated - use photo_category_relations table for many-to-many
+  category: varchar("category", { length: 100 }),
   dateTaken: timestamp("date_taken"),
   aspectRatio: varchar("aspect_ratio", { length: 20 }).default("landscape"),
   width: integer("width"),

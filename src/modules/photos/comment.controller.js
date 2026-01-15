@@ -28,10 +28,15 @@ async function createComment(req, res, next) {
     try {
         const { photoId } = req.params;
         const { content, guestName, isAnonymous } = req.body;
+        const file = req.file;
+
+        if (!req.user && file) {
+            return res.status(403).json({ error: "Only logged-in users can post image comments" });
+        }
 
         const comment = await commentService.addComment(
             parseInt(photoId),
-            { content, guestName, isAnonymous },
+            { content, guestName, isAnonymous, file },
             req.user || null
         );
 

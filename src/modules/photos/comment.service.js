@@ -18,7 +18,6 @@ class CommentService {
             const isGuest = !comment.userId;
             const isAnonymous = comment.isAnonymous;
 
-            // Determine display name
             let authorName;
             if (isGuest) {
                 authorName = comment.guestName || "Guest";
@@ -33,12 +32,12 @@ class CommentService {
                 photoId: comment.photoId,
                 authorName,
                 content: comment.content,
+                imageUrl: comment.imageUrl,
                 isAnonymous,
                 isGuest,
                 createdAt: comment.createdAt,
             };
 
-            // Only reveal real identity to admins for anonymous comments
             if (isAdmin && isAnonymous && comment.userId) {
                 result.realAuthor = {
                     id: comment.userId,
@@ -47,7 +46,6 @@ class CommentService {
                 };
             }
 
-            // Include avatar for non-anonymous logged-in users
             if (!isGuest && !isAnonymous && comment.userAvatar) {
                 result.authorAvatar = comment.userAvatar;
             }
@@ -61,7 +59,8 @@ class CommentService {
      * Supports both guest and logged-in users
      */
     async addComment(photoId, data, user = null) {
-        const { content, guestName, isAnonymous } = data;
+        const { content, guestName, file } = data;
+        const isAnonymous = data.isAnonymous === true || data.isAnonymous === "true";
 
         if (!content || content.trim().length === 0) {
             const error = new Error("Comment content is required");
@@ -69,7 +68,6 @@ class CommentService {
             throw error;
         }
 
-        // Guest comment validation
         if (!user && (!guestName || guestName.trim().length === 0)) {
             const error = new Error("Guest name is required");
             error.status = 400;
@@ -81,12 +79,12 @@ class CommentService {
             content: content.trim(),
             userId: user?.id || null,
             guestName: !user ? guestName.trim() : null,
-            isAnonymous: user ? (isAnonymous || false) : false,
+            isAnonymous: user ? isAnonymous : false,
+            imageUrl: file ? `/uploads/comments/${file.filename}` : null,
         };
 
         const comment = await commentRepository.createComment(commentData);
 
-        // Return formatted comment
         const result = {
             id: comment.id,
             photoId: comment.photoId,
@@ -96,6 +94,7 @@ class CommentService {
                     : user.name
                 : guestName.trim(),
             content: comment.content,
+            imageUrl: comment.imageUrl,
             isAnonymous: comment.isAnonymous,
             isGuest: !user,
             createdAt: comment.createdAt,

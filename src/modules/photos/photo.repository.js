@@ -6,20 +6,19 @@
 const { db } = require("../../shared/core/db");
 const { photos } = require("./photo.model");
 const { users } = require("../users/user.model");
-const { eq, desc, sql, and, like, or } = require("drizzle-orm");
+const { eq, desc, sql, and, like, or, inArray } = require("drizzle-orm");
 
 class PhotoRepository {
   /**
    * Get all photos with optional filtering
    */
-  async getAllPhotos({ category, isPublic = true, limit, offset } = {}) {
+  async getAllPhotos({ photoIds, isPublic = true, limit, offset } = {}) {
     let query = db
       .select({
         id: photos.id,
         title: photos.title,
         filename: photos.filename,
         originalName: photos.originalName,
-        category: photos.category,
         dateTaken: photos.dateTaken,
         aspectRatio: photos.aspectRatio,
         width: photos.width,
@@ -39,8 +38,8 @@ class PhotoRepository {
     if (isPublic !== undefined) {
       conditions.push(eq(photos.isPublic, isPublic));
     }
-    if (category && category !== "All") {
-      conditions.push(eq(photos.category, category));
+    if (photoIds && photoIds.length > 0) {
+      conditions.push(inArray(photos.id, photoIds));
     }
 
     if (conditions.length > 0) {
@@ -83,7 +82,6 @@ class PhotoRepository {
         title: photoData.title,
         filename: photoData.filename,
         originalName: photoData.originalName,
-        category: photoData.category,
         dateTaken: photoData.dateTaken ? new Date(photoData.dateTaken) : null,
         aspectRatio: photoData.aspectRatio || "landscape",
         width: photoData.width,
@@ -107,7 +105,6 @@ class PhotoRepository {
     };
 
     if (photoData.title !== undefined) updateData.title = photoData.title;
-    if (photoData.category !== undefined) updateData.category = photoData.category;
     if (photoData.dateTaken !== undefined) updateData.dateTaken = new Date(photoData.dateTaken);
     if (photoData.aspectRatio !== undefined) updateData.aspectRatio = photoData.aspectRatio;
     if (photoData.isPublic !== undefined) updateData.isPublic = photoData.isPublic;
@@ -136,28 +133,15 @@ class PhotoRepository {
   }
 
   /**
-   * Get all unique categories
-   */
-  async getCategories() {
-    const result = await db
-      .selectDistinct({ category: photos.category })
-      .from(photos)
-      .where(eq(photos.isPublic, true))
-      .orderBy(photos.category);
-
-    return result.map(r => r.category).filter(Boolean);
-  }
-
-  /**
    * Get photo count
    */
-  async getPhotoCount({ category, isPublic = true } = {}) {
+  async getPhotoCount({ photoIds, isPublic = true } = {}) {
     const conditions = [];
     if (isPublic !== undefined) {
       conditions.push(eq(photos.isPublic, isPublic));
     }
-    if (category && category !== "All") {
-      conditions.push(eq(photos.category, category));
+    if (photoIds && photoIds.length > 0) {
+      conditions.push(inArray(photos.id, photoIds));
     }
 
     const [result] = await db
@@ -177,7 +161,6 @@ class PhotoRepository {
       title: photo.title,
       filename: photo.filename,
       original_name: photo.originalName,
-      category: photo.category,
       date_taken: photo.dateTaken,
       aspect_ratio: photo.aspectRatio,
       width: photo.width,
