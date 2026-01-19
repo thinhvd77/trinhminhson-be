@@ -1,12 +1,12 @@
 const { AuthService } = require("./auth.service");
-const { loginSchema, registerSchema } = require("./auth.dtos");
+const { loginSchema, registerSchema, verifyEmailSchema, resendCodeSchema } = require("./auth.dtos");
 
 const authService = new AuthService();
 
 async function register(req, res, next) {
   try {
-    const { name, username, password } = registerSchema.parse(req.body);
-    const result = await authService.register(name, username, password);
+    const { name, username, email, password } = registerSchema.parse(req.body);
+    const result = await authService.register(name, username, email, password);
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -40,8 +40,30 @@ async function verify(req, res, next) {
   }
 }
 
+async function verifyEmail(req, res, next) {
+  try {
+    const { email, code } = verifyEmailSchema.parse(req.body);
+    const result = await authService.verifyEmail(email, code);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function resendCode(req, res, next) {
+  try {
+    const { email } = resendCodeSchema.parse(req.body);
+    const result = await authService.resendVerificationCode(email);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   register,
   login,
   verify,
+  verifyEmail,
+  resendCode,
 };

@@ -30,6 +30,16 @@ const config = {
   jwtSecret: getJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   allowedOrigins: process.env.ALLOWED_ORIGINS || "",
+  // Email configuration
+  smtp: {
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === "true" || false,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.SMTP_FROM || "Blog App <noreply@blog.com>",
+  },
+  frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
 };
 
 module.exports = { config };

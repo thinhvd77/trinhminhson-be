@@ -14,6 +14,7 @@ const {
 const {
     getComments,
     createComment,
+  updateComment,
     deleteComment,
 } = require("./comment.controller");
 
@@ -54,6 +55,12 @@ const upload = multer({
 router.get("/photos/:photoId/comments", optionalAuthMiddleware, getComments);
 
 router.post("/photos/:photoId/comments", optionalAuthMiddleware, upload.single("image"), createComment);
+
+router.patch(
+  "/photos/:photoId/comments/:commentId",
+  optionalAuthMiddleware,
+  updateComment
+);
 
 router.delete(
     "/photos/:photoId/comments/:commentId",

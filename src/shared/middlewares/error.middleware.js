@@ -30,7 +30,18 @@ function errorHandler(err, req, res, next) {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
 
-  res.status(status).json({ message });
+  // Build response object
+  const response = { message };
+
+  // Include additional error fields if present (for custom error codes)
+  if (err.code) {
+    response.code = err.code;
+  }
+  if (err.email) {
+    response.email = err.email;
+  }
+
+  res.status(status).json(response);
 }
 
 module.exports = { notFoundHandler, errorHandler };

@@ -1,12 +1,12 @@
 const { UserService } = require("./user.service");
-const { createUserSchema, updateUserSchema, userIdSchema, paginationSchema } = require("./user.dtos");
+const { createUserSchema, updateUserSchema, userIdSchema, paginationSchema, toggleStatusSchema, updateRoleSchema } = require("./user.dtos");
 
 const userService = new UserService();
 
 async function getAllUsers(req, res, next) {
   try {
-    const { page, limit } = paginationSchema.parse(req.query);
-    const result = await userService.getAllUsers(page, limit);
+    const { page, limit, search, role, status } = paginationSchema.parse(req.query);
+    const result = await userService.getAllUsers(page, limit, { search, role, status });
     res.status(200).json(result);
   } catch (error) {
     next(error);
@@ -47,8 +47,33 @@ async function updateUser(req, res, next) {
 async function deleteUser(req, res, next) {
   try {
     const { id } = userIdSchema.parse(req.params);
-    const result = await userService.deleteUser(id);
+    const currentUserId = req.user?.id;
+    const result = await userService.deleteUser(id, currentUserId);
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function toggleUserStatus(req, res, next) {
+  try {
+    const { id } = userIdSchema.parse(req.params);
+    const { isActive } = toggleStatusSchema.parse(req.body);
+    const currentUserId = req.user?.id;
+    const user = await userService.toggleStatus(id, isActive, currentUserId);
+    res.status(200).json(user);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateUserRole(req, res, next) {
+  try {
+    const { id } = userIdSchema.parse(req.params);
+    const { role } = updateRoleSchema.parse(req.body);
+    const currentUserId = req.user?.id;
+    const user = await userService.updateRole(id, role, currentUserId);
+    res.status(200).json(user);
   } catch (error) {
     next(error);
   }
@@ -60,4 +85,6 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
+  toggleUserStatus,
+  updateUserRole,
 };

@@ -5,6 +5,10 @@ const users = pgTable("users", {
   username: varchar("username", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   password: varchar("password", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  verificationCode: varchar("verification_code", { length: 6 }),
+  verificationCodeExpires: timestamp("verification_code_expires"),
   avatar: varchar("avatar", { length: 255 }),
   role: varchar("role", { length: 50 }).default("member").notNull(), // admin, member
   isActive: boolean("is_active").default(true).notNull(),

@@ -47,6 +47,27 @@ async function createComment(req, res, next) {
 }
 
 /**
+ * Update an existing comment within edit window
+ */
+async function updateComment(req, res, next) {
+    try {
+        const { photoId, commentId } = req.params;
+        const { content, guestToken } = req.body;
+
+        const updated = await commentService.updateComment(
+            parseInt(photoId),
+            parseInt(commentId),
+            { content, guestToken },
+            req.user || null
+        );
+
+        res.json(updated);
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
  * Delete a comment
  */
 async function deleteComment(req, res, next) {
@@ -65,5 +86,6 @@ async function deleteComment(req, res, next) {
 module.exports = {
     getComments,
     createComment,
+    updateComment,
     deleteComment,
 };

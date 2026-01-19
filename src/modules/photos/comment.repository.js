@@ -23,6 +23,7 @@ class CommentRepository {
                 imageUrl: photoComments.imageUrl,
                 isAnonymous: photoComments.isAnonymous,
                 createdAt: photoComments.createdAt,
+                updatedAt: photoComments.updatedAt,
                 userName: users.name,
                 userUsername: users.username,
                 userAvatar: users.avatar,
@@ -48,6 +49,7 @@ class CommentRepository {
                 content: data.content,
                 imageUrl: data.imageUrl || null,
                 isAnonymous: data.isAnonymous || false,
+                guestToken: data.guestToken || null,
             })
             .returning();
 
@@ -63,6 +65,22 @@ class CommentRepository {
             .from(photoComments)
             .where(eq(photoComments.id, id))
             .limit(1);
+
+        return comment;
+    }
+
+    /**
+     * Update comment content and updated timestamp
+     */
+    async updateComment(id, data) {
+        const [comment] = await db
+            .update(photoComments)
+            .set({
+                content: data.content,
+                updatedAt: data.updatedAt,
+            })
+            .where(eq(photoComments.id, id))
+            .returning();
 
         return comment;
     }

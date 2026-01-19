@@ -4,10 +4,12 @@ const bcrypt = require("bcrypt");
 const userRepository = new UserRepository();
 
 class UserService {
-  async getAllUsers(page = 1, limit = 10) {
+  async getAllUsers(page = 1, limit = 10, filters = {}) {
     const offset = (page - 1) * limit;
-    const users = await userRepository.findAll(limit, offset);
-    const total = await userRepository.count();
+    const { search, role, status } = filters;
+    
+    const users = await userRepository.findAllWithFilters({ limit, offset, search, role, status });
+    const total = await userRepository.countWithFilters({ search, role, status });
 
     const sanitizedUsers = users.map(user => this.sanitizeUser(user));
 
@@ -40,10 +42,21 @@ class UserService {
       throw error;
     }
 
+    // Check if email already exists
+    if (userData.email) {
+      const existingEmail = await userRepository.findByEmail(userData.email);
+      if (existingEmail) {
+        const error = new Error("Email already exists");
+        error.status = 409;
+        throw error;
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const user = await userRepository.create({
       ...userData,
       password: hashedPassword,
+      emailVerified: true, // Admin-created users are auto-verified
     });
 
     return this.sanitizeUser(user);
@@ -66,6 +79,15 @@ class UserService {
       }
     }
 
+    if (userData.email && userData.email !== existingUser.email) {
+      const emailExists = await userRepository.findByEmail(userData.email);
+      if (emailExists) {
+        const error = new Error("Email already exists");
+        error.status = 409;
+        throw error;
+      }
+    }
+
     if (userData.password) {
       userData.password = await bcrypt.hash(userData.password, 10);
     }
@@ -74,12 +96,29 @@ class UserService {
     return this.sanitizeUser(updatedUser);
   }
 
-  async deleteUser(id) {
+  async deleteUser(id, currentUserId) {
     const user = await userRepository.findById(id);
     if (!user) {
       const error = new Error("User not found");
       error.status = 404;
       throw error;
+    }
+
+    // Prevent self-deletion
+    if (currentUserId && id === currentUserId) {
+      const error = new Error("Cannot delete your own account");
+      error.status = 403;
+      throw error;
+    }
+
+    // Prevent deleting the last admin
+    if (user.role === 'admin') {
+      const adminCount = await userRepository.countAdmins();
+      if (adminCount <= 1) {
+        const error = new Error("Cannot delete the last admin user");
+        error.status = 403;
+        throw error;
+      }
     }
 
     await userRepository.delete(id);
@@ -109,8 +148,56 @@ class UserService {
     return { message: "Password changed successfully" };
   }
 
+  async toggleStatus(id, isActive, currentUserId) {
+    const user = await userRepository.findById(id);
+    if (!user) {
+      const error = new Error("User not found");
+      error.status = 404;
+      throw error;
+    }
+
+    // Prevent self-deactivation
+    if (currentUserId && id === currentUserId) {
+      const error = new Error("Cannot change your own status");
+      error.status = 403;
+      throw error;
+    }
+
+    const updatedUser = await userRepository.update(id, { isActive });
+    return this.sanitizeUser(updatedUser);
+  }
+
+  async updateRole(id, role, currentUserId) {
+    const user = await userRepository.findById(id);
+    if (!user) {
+      const error = new Error("User not found");
+      error.status = 404;
+      throw error;
+    }
+
+    // Prevent self-role change
+    if (currentUserId && id === currentUserId) {
+      const error = new Error("Cannot change your own role");
+      error.status = 403;
+      throw error;
+    }
+
+    // Prevent demoting the last admin
+    if (user.role === 'admin' && role !== 'admin') {
+      const adminCount = await userRepository.countAdmins();
+      if (adminCount <= 1) {
+        const error = new Error("Cannot demote the last admin user");
+        error.status = 403;
+        throw error;
+      }
+    }
+
+    const updatedUser = await userRepository.update(id, { role });
+    return this.sanitizeUser(updatedUser);
+  }
+
   sanitizeUser(user) {
-    const { password, ...sanitized } = user;
+    const { password, verificationCode, verificationCodeExpires, ...sanitized } = user;
     return sanitized;
   }
 }

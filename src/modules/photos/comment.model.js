@@ -13,10 +13,12 @@ const photoComments = pgTable("photo_comments", {
     photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }).notNull(),
     userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
     guestName: varchar("guest_name", { length: 100 }),
+    guestToken: varchar("guest_token", { length: 64 }),
     content: text("content").notNull(),
     imageUrl: varchar("image_url", { length: 500 }),
     isAnonymous: boolean("is_anonymous").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at"),
 });
 
 module.exports = {

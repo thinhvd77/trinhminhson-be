@@ -15,10 +15,12 @@ async function createAdminUser() {
   const username = process.env.ADMIN_USERNAME || "admin";
   const password = process.env.ADMIN_PASSWORD || "admin123";
   const name = process.env.ADMIN_NAME || "Admin User";
+  const email = process.env.ADMIN_EMAIL || "admin@blog.local";
 
   console.log("🔧 Creating admin user...");
   console.log(`Username: ${username}`);
   console.log(`Name: ${name}`);
+  console.log(`Email: ${email}`);
   console.log("");
 
   try {
@@ -42,10 +44,10 @@ async function createAdminUser() {
 
     // Insert user
     const result = await pool.query(
-      `INSERT INTO users (username, name, password, role, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       RETURNING id, username, name, role, is_active`,
-      [username, name, hashedPassword, "admin", true]
+      `INSERT INTO users (username, name, email, password, role, is_active, email_verified, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       RETURNING id, username, name, email, role, is_active, email_verified`,
+      [username, name, email, hashedPassword, "admin", true, true]
     );
 
     const user = result.rows[0];
@@ -56,8 +58,10 @@ async function createAdminUser() {
     console.log(`  ID: ${user.id}`);
     console.log(`  Username: ${user.username}`);
     console.log(`  Name: ${user.name}`);
+    console.log(`  Email: ${user.email}`);
     console.log(`  Role: ${user.role}`);
     console.log(`  Active: ${user.is_active}`);
+    console.log(`  Email Verified: ${user.email_verified}`);
     console.log("");
     console.log("Login Credentials:");
     console.log(`  Username: ${username}`);

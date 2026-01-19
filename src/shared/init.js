@@ -10,6 +10,7 @@ const SALT_ROUNDS = 10;
 const DEFAULT_ADMIN = {
   name: process.env.ADMIN_NAME || "Admin",
   username: process.env.ADMIN_USERNAME || "admin",
+  email: process.env.ADMIN_EMAIL || "admin@blog.local",
   // Generate random password if not provided - forces admin to set proper password
   password: process.env.ADMIN_PASSWORD || crypto.randomBytes(16).toString("hex"),
 };
@@ -31,9 +32,11 @@ async function initializeAdmin() {
     const admin = await userRepository.create({
       name: DEFAULT_ADMIN.name,
       username: DEFAULT_ADMIN.username,
+      email: DEFAULT_ADMIN.email,
       password: hashedPassword,
       role: "admin",
       isActive: true,
+      emailVerified: true, // Admin accounts are pre-verified
     });
 
     logger.info(`Admin account created successfully: ${admin.username}`);
