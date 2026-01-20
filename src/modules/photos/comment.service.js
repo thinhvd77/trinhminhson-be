@@ -4,6 +4,7 @@
  */
 
 const { commentRepository } = require("./comment.repository");
+const { commentReactionService } = require("./commentReaction.service");
 const { randomUUID } = require("crypto");
 
 const EDIT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -14,9 +15,17 @@ class CommentService {
      * Get comments for a photo
      * Hides anonymous user identities unless requester is admin
      */
-    async getComments(photoId, requestingUser = null) {
+    async getComments(photoId, requestingUser = null, guestToken = null) {
         const comments = await commentRepository.getCommentsByPhotoId(photoId);
         const isAdmin = requestingUser?.role === "admin";
+
+        // Get reactions for all comments
+        const commentIds = comments.map(c => c.id);
+        const reactionsMap = await commentReactionService.getReactionsForComments(
+            commentIds,
+            requestingUser?.id || null,
+            guestToken
+        );
 
         return comments.map((comment) => {
             const isGuest = !comment.userId;
@@ -43,6 +52,7 @@ class CommentService {
                 createdAt: comment.createdAt,
                 updatedAt: comment.updatedAt,
                 isOwner: Boolean(isOwner),
+                reactions: reactionsMap[comment.id] || {},
             };
 
             if (isAdmin && isAnonymous && comment.userId) {

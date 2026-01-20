@@ -37,7 +37,7 @@ async function getPhotoById(req, res, next) {
 }
 
 /**
- * Upload a new photo
+ * Upload a new photo (single file - kept for backward compatibility)
  */
 async function uploadPhoto(req, res, next) {
   try {
@@ -69,10 +69,13 @@ async function uploadPhoto(req, res, next) {
       }
     }
 
+    // Auto-generate title from filename if not provided
+    const photoTitle = title || file.originalname.replace(/\.[^/.]+$/, '');
+
     const photo = await photoService.uploadPhoto(
       file,
       {
-        title,
+        title: photoTitle,
         categoryIds: parsedCategoryIds,
         subcategoryIds: parsedSubcategoryIds,
         dateTaken,
@@ -82,6 +85,87 @@ async function uploadPhoto(req, res, next) {
     );
 
     res.status(201).json(photo);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Upload multiple photos (up to 10 files)
+ * Title is auto-generated from filename for each photo
+ */
+async function uploadMultiplePhotos(req, res, next) {
+  try {
+    const files = req.files;
+    const { categoryIds, subcategoryIds, dateTaken, isPublic } = req.body;
+    const uploadedBy = req.user?.id;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: "No files uploaded" });
+    }
+
+    if (files.length > 10) {
+      return res.status(400).json({ error: "Maximum 10 files allowed per upload" });
+    }
+
+    // Parse categoryIds
+    let parsedCategoryIds = [];
+    if (categoryIds) {
+      try {
+        parsedCategoryIds = typeof categoryIds === 'string'
+          ? JSON.parse(categoryIds)
+          : categoryIds;
+      } catch (e) {
+        console.error('Failed to parse categoryIds:', e);
+      }
+    }
+
+    // Parse subcategoryIds
+    let parsedSubcategoryIds = [];
+    if (subcategoryIds) {
+      try {
+        parsedSubcategoryIds = typeof subcategoryIds === 'string'
+          ? JSON.parse(subcategoryIds)
+          : subcategoryIds;
+      } catch (e) {
+        console.error('Failed to parse subcategoryIds:', e);
+      }
+    }
+
+    const uploaded = [];
+    const errors = [];
+
+    for (const file of files) {
+      try {
+        // Auto-generate title from filename (remove extension)
+        const title = file.originalname.replace(/\.[^/.]+$/, '');
+
+        const photo = await photoService.uploadPhoto(
+          file,
+          {
+            title,
+            categoryIds: parsedCategoryIds,
+            subcategoryIds: parsedSubcategoryIds,
+            dateTaken,
+            isPublic: isPublic === "true" || isPublic === true,
+          },
+          uploadedBy
+        );
+        uploaded.push(photo);
+      } catch (error) {
+        errors.push({
+          filename: file.originalname,
+          error: error.message,
+        });
+      }
+    }
+
+    res.status(201).json({
+      message: `Successfully uploaded ${uploaded.length} of ${files.length} photos`,
+      uploaded,
+      errors,
+      total: files.length,
+    });
   } catch (error) {
     next(error);
   }
@@ -134,6 +218,7 @@ module.exports = {
   getAllPhotos,
   getPhotoById,
   uploadPhoto,
+  uploadMultiplePhotos,
   updatePhoto,
   deletePhoto,
   reorderPhotos,

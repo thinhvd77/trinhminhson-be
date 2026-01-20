@@ -9,6 +9,7 @@ const { vocabularyRoutes } = require("./modules/vocabulary/vocabulary.routes");
 const { photoRoutes } = require("./modules/photos/photo.routes");
 const categoryRoutes = require("./modules/photos/category.routes");
 const { commentRoutes } = require("./modules/photos/comment.routes");
+const { commentReactionRoutes } = require("./modules/photos/commentReaction.routes");
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.use(noteRoutes);
 router.use(vocabularyRoutes);
 router.use(photoRoutes);
 router.use(commentRoutes);
+router.use(commentReactionRoutes);
 router.use("/categories", categoryRoutes);
 
 module.exports = { routes: router };

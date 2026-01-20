@@ -11,9 +11,11 @@ const { commentService } = require("./comment.service");
 async function getComments(req, res, next) {
     try {
         const { photoId } = req.params;
+        const guestToken = req.query.guestToken || null;
         const comments = await commentService.getComments(
             parseInt(photoId),
-            req.user || null
+            req.user || null,
+            guestToken
         );
         res.json(comments);
     } catch (error) {

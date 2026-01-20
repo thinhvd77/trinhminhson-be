@@ -13,6 +13,7 @@ const {
   getAllPhotos,
   getPhotoById,
   uploadPhoto,
+  uploadMultiplePhotos,
   updatePhoto,
   deletePhoto,
   reorderPhotos,
@@ -58,8 +59,8 @@ const upload = multer({
 router.get("/photos", getAllPhotos);
 router.get("/photos/:id", getPhotoById);
 
-// Protected routes
-router.post("/photos", authMiddleware, uploadLimiter, upload.single("file"), uploadPhoto);
+// Protected routes - support up to 10 files
+router.post("/photos", authMiddleware, uploadLimiter, upload.array("files", 10), uploadMultiplePhotos);
 router.patch("/photos/reorder", authMiddleware, reorderPhotos);
 router.patch("/photos/:id", authMiddleware, updatePhoto);
 router.delete("/photos/:id", authMiddleware, deletePhoto);
