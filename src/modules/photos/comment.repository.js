@@ -17,8 +17,10 @@ class CommentRepository {
             .select({
                 id: photoComments.id,
                 photoId: photoComments.photoId,
+                parentId: photoComments.parentId,
                 userId: photoComments.userId,
                 guestName: photoComments.guestName,
+                guestToken: photoComments.guestToken,
                 content: photoComments.content,
                 imageUrl: photoComments.imageUrl,
                 isAnonymous: photoComments.isAnonymous,
@@ -44,6 +46,7 @@ class CommentRepository {
             .insert(photoComments)
             .values({
                 photoId: data.photoId,
+                parentId: data.parentId || null,
                 userId: data.userId || null,
                 guestName: data.guestName || null,
                 content: data.content,

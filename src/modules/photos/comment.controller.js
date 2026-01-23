@@ -24,12 +24,12 @@ async function getComments(req, res, next) {
 }
 
 /**
- * Create a new comment
+ * Create a new comment (or reply)
  */
 async function createComment(req, res, next) {
     try {
         const { photoId } = req.params;
-        const { content, guestName, isAnonymous } = req.body;
+        const { content, guestName, isAnonymous, parentId } = req.body;
         const file = req.file;
 
         if (!req.user && file) {
@@ -38,7 +38,13 @@ async function createComment(req, res, next) {
 
         const comment = await commentService.addComment(
             parseInt(photoId),
-            { content, guestName, isAnonymous, file },
+            {
+                content,
+                guestName,
+                isAnonymous,
+                file,
+                parentId: parentId ? parseInt(parentId) : null,
+            },
             req.user || null
         );
 

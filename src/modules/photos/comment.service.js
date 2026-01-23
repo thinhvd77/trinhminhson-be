@@ -14,6 +14,7 @@ class CommentService {
     /**
      * Get comments for a photo
      * Hides anonymous user identities unless requester is admin
+     * Returns top-level comments with nested replies
      */
     async getComments(photoId, requestingUser = null, guestToken = null) {
         const comments = await commentRepository.getCommentsByPhotoId(photoId);
@@ -27,10 +28,12 @@ class CommentService {
             guestToken
         );
 
-        return comments.map((comment) => {
+        // Transform comments to response format
+        const transformComment = (comment) => {
             const isGuest = !comment.userId;
             const isAnonymous = comment.isAnonymous;
             const isOwner = requestingUser && comment.userId === requestingUser.id;
+            const hasGuestToken = guestToken && comment.guestToken === guestToken;
 
             let authorName;
             if (isGuest) {
@@ -44,6 +47,7 @@ class CommentService {
             const result = {
                 id: comment.id,
                 photoId: comment.photoId,
+                parentId: comment.parentId,
                 authorName,
                 content: comment.content,
                 imageUrl: comment.imageUrl,
@@ -51,7 +55,7 @@ class CommentService {
                 isGuest,
                 createdAt: comment.createdAt,
                 updatedAt: comment.updatedAt,
-                isOwner: Boolean(isOwner),
+                isOwner: Boolean(isOwner) || hasGuestToken,
                 reactions: reactionsMap[comment.id] || {},
             };
 
@@ -68,15 +72,41 @@ class CommentService {
             }
 
             return result;
-        });
+        };
+
+        // Separate top-level comments and replies
+        const topLevelComments = [];
+        const repliesMap = new Map();
+
+        for (const comment of comments) {
+            if (comment.parentId) {
+                if (!repliesMap.has(comment.parentId)) {
+                    repliesMap.set(comment.parentId, []);
+                }
+                repliesMap.get(comment.parentId).push(transformComment(comment));
+            } else {
+                topLevelComments.push(transformComment(comment));
+            }
+        }
+
+        // Sort replies by createdAt ascending and attach to parent comments
+        for (const topComment of topLevelComments) {
+            const replies = repliesMap.get(topComment.id) || [];
+            // Sort replies by createdAt ascending (oldest first)
+            replies.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            topComment.replies = replies;
+        }
+
+        return topLevelComments;
     }
 
     /**
      * Add a new comment
      * Supports both guest and logged-in users
+     * Supports reply comments (1 level nesting only)
      */
     async addComment(photoId, data, user = null) {
-        const { content, guestName, file } = data;
+        const { content, guestName, file, parentId } = data;
         const isAnonymous = data.isAnonymous === true || data.isAnonymous === "true";
 
         if (!content || content.trim().length === 0) {
@@ -91,10 +121,29 @@ class CommentService {
             throw error;
         }
 
+        // Validate parent comment if replying
+        if (parentId) {
+            const parentComment = await commentRepository.getCommentById(parentId);
+
+            if (!parentComment || parentComment.photoId !== photoId) {
+                const error = new Error("Parent comment not found");
+                error.status = 404;
+                throw error;
+            }
+
+            // Only allow 1 level of nesting
+            if (parentComment.parentId) {
+                const error = new Error("Cannot reply to a reply");
+                error.status = 400;
+                throw error;
+            }
+        }
+
         const guestToken = user ? null : randomUUID();
 
         const commentData = {
             photoId,
+            parentId: parentId || null,
             content: content.trim(),
             userId: user?.id || null,
             guestName: !user ? guestName.trim() : null,
@@ -108,6 +157,7 @@ class CommentService {
         const result = {
             id: comment.id,
             photoId: comment.photoId,
+            parentId: comment.parentId,
             authorName: user
                 ? isAnonymous
                     ? "Anonymous"

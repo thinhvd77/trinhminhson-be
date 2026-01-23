@@ -11,6 +11,7 @@ const { users } = require("../users/user.model");
 const photoComments = pgTable("photo_comments", {
     id: serial("id").primaryKey(),
     photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }).notNull(),
+    parentId: integer("parent_id"),
     userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
     guestName: varchar("guest_name", { length: 100 }),
     guestToken: varchar("guest_token", { length: 64 }),
