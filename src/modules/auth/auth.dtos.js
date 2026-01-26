@@ -26,9 +26,25 @@ const resendCodeSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Email không hợp lệ"),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token không được để trống"),
+  password: z
+    .string()
+    .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
+    .regex(/[A-Z]/, "Mật khẩu phải chứa ít nhất một chữ hoa")
+    .regex(/[a-z]/, "Mật khẩu phải chứa ít nhất một chữ thường")
+    .regex(/[0-9]/, "Mật khẩu phải chứa ít nhất một số"),
+});
+
 module.exports = {
   loginSchema,
   registerSchema,
   verifyEmailSchema,
   resendCodeSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 };

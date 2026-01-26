@@ -62,6 +62,11 @@ class UserRepository {
     return result[0] || null;
   }
 
+  async findByPasswordResetToken(token) {
+    const result = await db.select().from(users).where(eq(users.passwordResetToken, token));
+    return result[0] || null;
+  }
+
   async create(userData) {
     const result = await db.insert(users).values(userData).returning();
     return result[0];

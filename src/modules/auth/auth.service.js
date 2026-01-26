@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const { UserRepository } = require("../users/user.repository");
 const { config } = require("../../shared/config/env");
 const { emailService } = require("../../shared/utils/email.service");
@@ -12,6 +13,7 @@ const JWT_SECRET = config.jwtSecret;
 const JWT_EXPIRES_IN = config.jwtExpiresIn;
 const SALT_ROUNDS = 10;
 const VERIFICATION_CODE_EXPIRY = 15 * 60 * 1000; // 15 minutes in milliseconds
+const PASSWORD_RESET_EXPIRY = 60 * 60 * 1000; // 1 hour in milliseconds
 
 // Generate 6-digit verification code
 function generateVerificationCode() {
@@ -266,6 +268,83 @@ class AuthService {
       avatar: user.avatar || null,
       role: user.role,
       isActive: user.isActive,
+    };
+  }
+
+  async forgotPassword(email) {
+    const user = await userRepository.findByEmail(email);
+
+    // Always return success message to not reveal email existence (security)
+    const successMessage = {
+      message: "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu.",
+    };
+
+    // Don't process if user doesn't exist or is inactive
+    if (!user || !user.isActive) {
+      return successMessage;
+    }
+
+    // Generate secure token (32 bytes = 64 hex characters)
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY);
+
+    // Save token to database
+    await userRepository.update(user.id, {
+      passwordResetToken: resetToken,
+      passwordResetExpires: resetExpires,
+    });
+
+    // Build reset URL
+    const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
+
+    // Send email
+    try {
+      await emailService.sendPasswordResetEmail(email, resetUrl, user.name);
+      logger.info(`Password reset email sent to ${email}`);
+    } catch (error) {
+      logger.error(`Failed to send password reset email to ${email}:`, error);
+      // Don't throw - user can retry
+    }
+
+    return successMessage;
+  }
+
+  async resetPassword(token, newPassword) {
+    // Find user by reset token
+    const user = await userRepository.findByPasswordResetToken(token);
+
+    if (!user) {
+      const error = new Error("Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+      error.status = 400;
+      throw error;
+    }
+
+    // Check if token expired
+    if (new Date() > new Date(user.passwordResetExpires)) {
+      const error = new Error("Link đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu link mới.");
+      error.status = 400;
+      throw error;
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      const error = new Error("Tài khoản đã bị vô hiệu hóa");
+      error.status = 403;
+      throw error;
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    // Update password and clear reset token
+    await userRepository.update(user.id, {
+      password: hashedPassword,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    });
+
+    return {
+      message: "Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập.",
     };
   }
 }
