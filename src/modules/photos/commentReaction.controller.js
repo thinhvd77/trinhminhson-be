@@ -24,18 +24,25 @@ async function getReactions(req, res, next) {
 
 /**
  * Toggle a reaction on a comment
+ * Requires authentication - guests cannot react
  */
 async function toggleReaction(req, res, next) {
     try {
-        const { commentId } = commentIdParam.parse(req.params);
-        const { emoji, guestToken } = toggleReactionDto.parse(req.body);
         const userId = req.user?.id || null;
+
+        // Require authentication for reactions
+        if (!userId) {
+            return res.status(401).json({ error: "Authentication required to react" });
+        }
+
+        const { commentId } = commentIdParam.parse(req.params);
+        const { emoji } = toggleReactionDto.parse(req.body);
 
         const result = await commentReactionService.toggleReaction(
             commentId,
             emoji,
             userId,
-            guestToken
+            null // No guest token - only authenticated users can react
         );
 
         res.json(result);

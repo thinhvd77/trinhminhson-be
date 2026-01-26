@@ -77,13 +77,16 @@ async function updateComment(req, res, next) {
 
 /**
  * Delete a comment
+ * Accepts guestToken in request body for guest comment deletion
  */
 async function deleteComment(req, res, next) {
     try {
         const { commentId } = req.params;
+        const { guestToken } = req.body;
         const result = await commentService.deleteComment(
             parseInt(commentId),
-            req.user
+            req.user || null,
+            guestToken || null
         );
         res.json(result);
     } catch (error) {

@@ -24,18 +24,25 @@ async function getVotes(req, res, next) {
 
 /**
  * Toggle a vote on a comment (like/dislike)
+ * Requires authentication - guests cannot vote
  */
 async function toggleVote(req, res, next) {
     try {
-        const { commentId } = commentIdParam.parse(req.params);
-        const { voteType, guestToken } = toggleVoteDto.parse(req.body);
         const userId = req.user?.id || null;
+
+        // Require authentication for voting
+        if (!userId) {
+            return res.status(401).json({ error: "Authentication required to vote" });
+        }
+
+        const { commentId } = commentIdParam.parse(req.params);
+        const { voteType } = toggleVoteDto.parse(req.body);
 
         const result = await commentVoteService.toggleVote(
             commentId,
             voteType,
             userId,
-            guestToken
+            null // No guest token - only authenticated users can vote
         );
 
         res.json(result);

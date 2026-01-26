@@ -298,4 +298,6 @@ describe('CommentService - Reply Feature', () => {
             expect(mockDeleteComment).toHaveBeenCalledWith(1);
         });
     });
+
+    // Note: Guest comment deletion tests are in guestCommentDelete.test.js
 });

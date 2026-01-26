@@ -260,14 +260,9 @@ class CommentService {
     /**
      * Delete a comment
      * Admin can delete anytime, owner can delete within 1 week
+     * Guest users can delete their own comments with valid guestToken within 1 week
      */
-    async deleteComment(commentId, user) {
-        if (!user) {
-            const error = new Error("Authentication required");
-            error.status = 401;
-            throw error;
-        }
-
+    async deleteComment(commentId, user, guestToken = null) {
         const comment = await commentRepository.getCommentById(commentId);
         if (!comment) {
             const error = new Error("Comment not found");
@@ -275,25 +270,31 @@ class CommentService {
             throw error;
         }
 
-        // Only owner or admin can delete
-        const isOwner = comment.userId === user.id;
-        const isAdmin = user.role === "admin";
+        const isAdmin = user?.role === "admin";
+        const isGuestComment = !comment.userId;
+        const isOwnerUser = user && comment.userId === user.id;
+        const isGuestOwner = isGuestComment && guestToken && guestToken === comment.guestToken;
 
-        if (!isOwner && !isAdmin) {
+        // Admin can always delete any comment
+        if (isAdmin) {
+            await commentRepository.deleteComment(commentId);
+            return { message: "Comment deleted successfully" };
+        }
+
+        // Check authorization
+        if (!isOwnerUser && !isGuestOwner) {
             const error = new Error("Not authorized to delete this comment");
             error.status = 403;
             throw error;
         }
 
-        // Owner limited to 1-week window; admin can delete anytime
-        if (isOwner && !isAdmin) {
-            const now = Date.now();
-            const createdAt = new Date(comment.createdAt).getTime();
-            if (now - createdAt > DELETE_WINDOW_MS) {
-                const error = new Error("Delete window has expired (1 week limit)");
-                error.status = 403;
-                throw error;
-            }
+        // Both owner and guest owner are limited to 1-week window
+        const now = Date.now();
+        const createdAt = new Date(comment.createdAt).getTime();
+        if (now - createdAt > DELETE_WINDOW_MS) {
+            const error = new Error("Delete window has expired (1 week limit)");
+            error.status = 403;
+            throw error;
         }
 
         await commentRepository.deleteComment(commentId);
