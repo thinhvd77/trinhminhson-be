@@ -183,7 +183,7 @@ class EmailService {
           <div class="footer">
             <p class="footer-text">
               Email này được gửi tự động, vui lòng không trả lời.<br/>
-              © ${new Date().getFullYear()} Blog App. All rights reserved.
+              © ${new Date().getFullYear()} trinhminhson.com. All rights reserved.
             </p>
           </div>
         </div>
@@ -205,14 +205,14 @@ Vui lòng nhập mã này vào trang web để hoàn tất đăng ký.
 Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.
 
 --
-Blog App
+trinhminhson.com
     `;
 
     try {
       await this.transporter.sendMail({
         from: config.smtp.from,
         to: email,
-        subject: "🔐 Mã Xác Thực Email - Blog App",
+        subject: "🔐 Mã Xác Thực Email - trinhminhson.com",
         text: textContent,
         html: htmlTemplate,
       });
@@ -304,7 +304,7 @@ Blog App
           </div>
           <div class="footer">
             Email này được gửi tự động, vui lòng không trả lời.<br/>
-            © ${new Date().getFullYear()} Blog App. All rights reserved.
+            © ${new Date().getFullYear()} trinhminhson.com. All rights reserved.
           </div>
         </div>
       </body>
@@ -315,7 +315,7 @@ Blog App
       await this.transporter.sendMail({
         from: config.smtp.from,
         to: email,
-        subject: "🔑 Đặt Lại Mật Khẩu - Blog App",
+        subject: "🔑 Đặt Lại Mật Khẩu - trinhminhson.com",
         html: htmlTemplate,
       });
 
